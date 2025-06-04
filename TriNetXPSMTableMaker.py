@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from io import StringIO
 import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide")
@@ -38,7 +37,7 @@ def deduplicate_columns(cols):
 
 df_clean.columns = deduplicate_columns(df_clean.columns)
 
-# Sidebar
+# Sidebar: Options
 st.sidebar.header("🛠️ Display Options")
 table_title = st.sidebar.text_input("Table Title", "Formatted TriNetX Table")
 font_size = st.sidebar.slider("Font Size (pt)", 6, 18, 10)
@@ -55,7 +54,7 @@ for col in df_display.columns:
         pass
 df_display = df_display.fillna("")
 
-# Merge function
+# Generate HTML table
 def merge_rows_html(df, font_size, align, title=None):
     align_css = {"left": "left", "center": "center", "right": "right"}[align]
     html = f'''
@@ -104,31 +103,28 @@ def merge_rows_html(df, font_size, align, title=None):
     html += "</table>"
     return html
 
-# Generate HTML
-html = merge_rows_html(df_display, font_size, alignment, table_title)
+html_table = merge_rows_html(df_display, font_size, alignment, table_title)
 
-# Display Table
+# Display in main pane
 st.markdown("### 🧾 Copy This Table Below and Paste into Word")
-st.markdown(html, unsafe_allow_html=True)
+st.markdown(html_table, unsafe_allow_html=True)
 
-# --- SIDEBAR COPY BUTTON THAT WORKS ---
-from html import escape
-
-escaped_html = escape(html)  # Escape <, > for textarea
-
-copy_html_code = f"""
-<textarea id="htmlTable" style="width:100%; height:200px;">{escaped_html}</textarea>
-<button onclick="copyHTML()">📋 Copy Table to Clipboard</button>
+# Sidebar: working clipboard copy
+copy_clipboard_code = f"""
 <script>
-function copyHTML() {{
-  var copyText = document.getElementById("htmlTable");
-  copyText.select();
-  document.execCommand("copy");
-  alert("✅ Table copied to clipboard!");
+function copyToClipboard() {{
+    const html = `{html_table.replace("`", "\\`").replace("\\", "\\\\")}`;
+    const blob = new Blob([html], {{type: 'text/html'}});
+    const data = [new ClipboardItem({{'text/html': blob}})];
+    navigator.clipboard.write(data).then(() => {{
+        alert('✅ HTML table copied to clipboard!');
+    }}, () => {{
+        alert('❌ Copy failed. Your browser may not support programmatic clipboard access.');
+    }});
 }}
 </script>
+<button onclick="copyToClipboard()" style="padding:6px 12px; font-size:14px;">📋 Copy HTML Table to Clipboard</button>
 """
 
 st.sidebar.subheader("📋 Copy HTML Table")
-components.html(copy_html_code, height=250)
-
+components.html(copy_clipboard_code, height=100)
