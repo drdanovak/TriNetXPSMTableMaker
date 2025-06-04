@@ -65,34 +65,30 @@ for col in df_trimmed.columns:
     if "p-Value" in col:
         df_trimmed[col] = df_trimmed[col].apply(lambda x: "p<.001" if str(x).strip() == "0" else x)
 
-# Merge duplicate values in Characteristic ID and Name
-if merge_duplicates:
-    for merge_col in ["Characteristic ID", "Characteristic Name"]:
-        if merge_col in df_trimmed.columns:
-            prev = None
-            new_col = []
-            for val in df_trimmed[merge_col]:
-                if val == prev:
-                    new_col.append("")
-                else:
-                    new_col.append(val)
-                    prev = val
-            df_trimmed[merge_col] = new_col
-
 # Preset grouping checkboxes
 st.sidebar.subheader("🧩 Preset Group Rows")
-preset_groups = {
-    "Demographics": 0,
-    "Conditions": 10,
-    "Lab Values": 20,
-    "Medications": 30
-}
-selected_groups = [label for label, index in preset_groups.items() if st.sidebar.checkbox(label)]
-group_indices = {preset_groups[label] for label in selected_groups}
+preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
+insert_rows = []
+for label in preset_groups:
+    if st.sidebar.checkbox(label):
+        insert_rows.append(pd.Series([label] + ["" for _ in range(df_trimmed.shape[1] - 1)], index=df_trimmed.columns))
 
-# Add grouping row titles
-for label in selected_groups:
-    df_trimmed.loc[preset_groups[label]] = [label] + ["" for _ in range(df_trimmed.shape[1] - 1)]
+# Add grouping rows without overwriting data
+if insert_rows:
+    df_trimmed = pd.concat([pd.DataFrame(insert_rows), df_trimmed], ignore_index=True)
+
+# Merge duplicate values in Characteristic ID and Name regardless of order
+if merge_duplicates:
+    for merge_col in [col for col in df_trimmed.columns if col.strip() in ["Characteristic ID", "Characteristic Name"]]:
+        prev = None
+        new_col = []
+        for val in df_trimmed[merge_col]:
+            if val == prev:
+                new_col.append("")
+            else:
+                new_col.append(val)
+                prev = val
+        df_trimmed[merge_col] = new_col
 
 # Add column grouping separator if selected
 if add_column_grouping:
@@ -174,18 +170,15 @@ def get_journal_css(journal_style, font_size, h_align, v_align):
     </style>
     """
 
-def generate_html_table(df, group_rows, journal_style, font_size, h_align, v_align):
+def generate_html_table(df, journal_style, font_size, h_align, v_align):
     css = get_journal_css(journal_style, font_size, h_align, v_align)
     html = css + "<table><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
-    for i, row in df.iterrows():
-        if i in group_rows:
-            html += f'<tr class="group-row"><td colspan="{len(df.columns)}">{row.iloc[1]}</td></tr>'
-        else:
-            html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row]) + "</tr>"
+    for _, row in df.iterrows():
+        html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row]) + "</tr>"
     html += "</table>"
     return html
 
-html_table = generate_html_table(df_trimmed, group_indices, journal_style, font_size, h_align, v_align)
+html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
 st.markdown("### 🧾 Formatted Table Preview")
 st.markdown(html_table, unsafe_allow_html=True)
 
