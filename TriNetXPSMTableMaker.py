@@ -90,11 +90,12 @@ group_indices = {preset_groups[label] for label in selected_groups}
 if edit_toggle:
     st.subheader("📋 Editable Table")
     if show_aggrid:
+        df_trimmed.insert(0, "Drag", "⇅")
         gb = GridOptionsBuilder.from_dataframe(df_trimmed)
         gb.configure_default_column(editable=True, resizable=True)
+        gb.configure_column("Drag", header_name="", rowDrag=True, pinned="left", editable=False, width=50)
         gb.configure_grid_options(rowDragManaged=True, animateRows=True)
         gb.configure_selection(selection_mode="multiple")
-        gb.configure_grid_options(rowDrag=True)
         gridOptions = gb.build()
 
         grid_response = AgGrid(
@@ -107,7 +108,7 @@ if edit_toggle:
             reload_data=True
         )
 
-        df_trimmed = pd.DataFrame(grid_response["data"])
+        df_trimmed = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"])
 
 # CSS and HTML rendering
 def get_journal_css(journal_style, font_size, h_align, v_align):
