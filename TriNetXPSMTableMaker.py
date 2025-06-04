@@ -5,7 +5,7 @@ import numpy as np
 st.set_page_config(layout="wide")
 st.title("🧾 TriNetX Table Formatter for Copy-Paste into Word")
 
-# Upload
+# Upload CSV
 uploaded_file = st.file_uploader("📂 Upload your TriNetX CSV file", type="csv")
 if not uploaded_file:
     st.stop()
@@ -24,6 +24,9 @@ def extract_clean_table(df):
     return df_clean
 
 df_clean = extract_clean_table(df_raw)
+
+# 🛠️ Fix: Deduplicate column names to avoid pyarrow error
+df_clean.columns = pd.io.parsers.ParserBase({'names': df_clean.columns})._maybe_dedup_names(df_clean.columns)
 
 # Sidebar formatting
 st.sidebar.header("🛠️ Display Options")
