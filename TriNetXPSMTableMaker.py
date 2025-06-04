@@ -18,6 +18,18 @@ df_data = df_raw[1:].reset_index(drop=True)
 # Store original for reset
 original_df = df_data.copy()
 
+# Sidebar Settings
+st.sidebar.header("🛠️ Table Settings")
+font_size = st.sidebar.slider("Font Size", 6, 18, 10)
+h_align = st.sidebar.selectbox("Text Horizontal Alignment", ["left", "center", "right"])
+v_align = st.sidebar.selectbox("Text Vertical Alignment", ["top", "middle", "bottom"])
+journal_style = st.sidebar.selectbox("Journal Style", ["None", "NEJM", "AMA", "APA", "JAMA"])
+decimal_places = st.sidebar.slider("Round numerical values to", 0, 5, 2)
+edit_toggle = st.sidebar.checkbox("✏️ Edit Table (with drag-and-drop)")
+merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
+add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators")
+reset_table = st.sidebar.button("🔄 Reset Table to Default")
+
 # Updated default columns and order with group markers
 default_columns = [
     "Characteristic Name", "Characteristic ID", "Category",
@@ -31,30 +43,16 @@ available_columns = list(df_data.columns)
 filtered_columns = [col for col in default_columns if col in available_columns]
 df_trimmed = df_data[filtered_columns].copy()
 
-# Sidebar Settings
-st.sidebar.header("🛠️ Table Settings")
-font_size = st.sidebar.slider("Font Size", 6, 18, 10)
-h_align = st.sidebar.selectbox("Text Horizontal Alignment", ["left", "center", "right"])
-v_align = st.sidebar.selectbox("Text Vertical Alignment", ["top", "middle", "bottom"])
-journal_style = st.sidebar.selectbox("Journal Style", ["None", "NEJM", "AMA", "APA", "JAMA"])
-decimal_places = st.sidebar.slider("Round numerical values to", 0, 5, 2)
-edit_toggle = st.sidebar.checkbox("✏️ Edit Table (with drag-and-drop)")
-merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
-add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators")
-reset_table = st.sidebar.button("🔄 Reset Table to Default")
-
 with st.sidebar.expander("📋 Column Selection and Renaming", expanded=False):
     selected_columns = st.multiselect("Select columns to include", available_columns, default=filtered_columns)
     rename_dict = {}
     for col in selected_columns:
         rename_dict[col] = st.text_input(f"Rename '{col}'", col, key=f"rename_{col}")
 
-# Apply selection and rename
 df_trimmed = df_data[selected_columns].copy()
 df_trimmed.rename(columns=rename_dict, inplace=True)
 df_trimmed.fillna("", inplace=True)
 
-# Apply rounding and format p-values
 for col in df_trimmed.columns:
     try:
         df_trimmed[col] = df_trimmed[col].astype(float).round(decimal_places)
@@ -69,17 +67,17 @@ for col in df_trimmed.columns:
 st.sidebar.subheader("🧩 Preset Group Rows")
 preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
 group_labels = []
+grouped_rows = []
+
 for label in preset_groups:
     if st.sidebar.checkbox(label):
         group_row = pd.Series([label] + ["" for _ in range(len(df_trimmed.columns) - 1)], index=df_trimmed.columns)
-        group_row["__is_group_row"] = True
-        group_labels.append(group_row)
+        group_row["Characteristic Name"] = label
+        grouped_rows.append(group_row)
 
-if group_labels:
-    group_df = pd.DataFrame(group_labels)
-    df_trimmed = pd.concat([group_df, df_trimmed], ignore_index=True)
+if grouped_rows:
+    df_trimmed = pd.concat([pd.DataFrame(grouped_rows), df_trimmed], ignore_index=True)
 
-# Merge duplicate values in Characteristic ID and Name regardless of order
 if merge_duplicates:
     for merge_col in [col for col in df_trimmed.columns if col.strip() in ["Characteristic ID", "Characteristic Name"]]:
         prev = None
@@ -92,7 +90,6 @@ if merge_duplicates:
                 prev = val
         df_trimmed[merge_col] = new_col
 
-# Add column grouping separator if selected
 if add_column_grouping:
     try:
         col_names = list(df_trimmed.columns)
@@ -102,11 +99,10 @@ if add_column_grouping:
     except Exception as e:
         st.error(f"Error applying column grouping: {e}")
 
-# Reset table
 if reset_table:
     df_trimmed = original_df[filtered_columns].copy()
 
-# Display Table if enabled
+# Editable table
 if edit_toggle:
     st.subheader("📋 Editable Table")
     df_trimmed.insert(0, "Drag", "⇅")
@@ -115,7 +111,6 @@ if edit_toggle:
     gb.configure_column("Drag", header_name="", rowDrag=True, pinned="left", editable=False, width=50)
     gb.configure_grid_options(rowDragManaged=True, animateRows=True)
 
-    # Highlight group rows
     group_row_style = JsCode("""
     function(params) {
         if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'])) {
@@ -130,7 +125,6 @@ if edit_toggle:
     gb.configure_grid_options(getRowStyle=group_row_style)
 
     gridOptions = gb.build()
-
     grid_response = AgGrid(
         df_trimmed,
         gridOptions=gridOptions,
@@ -140,10 +134,9 @@ if edit_toggle:
         height=500,
         reload_data=True
     )
-
     df_trimmed = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
 
-# CSS and HTML rendering
+# Final preview
 
 def get_journal_css(journal_style, font_size, h_align, v_align):
     return f"""
@@ -176,7 +169,7 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     css = get_journal_css(journal_style, font_size, h_align, v_align)
     html = css + "<table><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
     for _, row in df.iterrows():
-        if row["Characteristic Name"] in ["Demographics", "Conditions", "Lab Values", "Medications"]:
+        if row["Characteristic Name"] in preset_groups:
             html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row['Characteristic Name']}</td></tr>"
         else:
             html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row]) + "</tr>"
