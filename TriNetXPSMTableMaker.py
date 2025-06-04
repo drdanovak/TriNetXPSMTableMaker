@@ -66,13 +66,12 @@ for col in df_trimmed.columns:
 # Preset grouping checkboxes
 st.sidebar.subheader("🧩 Preset Group Rows")
 preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
-selected_groups = [label for label in preset_groups if st.sidebar.checkbox(label)]
-
+selected_groups = []
 for label in preset_groups:
-    if st.sidebar.checkbox(label):
-        group_row = pd.Series([label] + ["" for _ in range(len(df_trimmed.columns) - 1)], index=df_trimmed.columns)
-        group_row["Characteristic Name"] = label
-        grouped_rows.append(group_row)
+    if st.sidebar.checkbox(label, key=f"group_checkbox_{label}"):
+        selected_groups.append(label)
+
+
 
 if selected_groups:
     # Remove any previous group rows before reinserting them in order
