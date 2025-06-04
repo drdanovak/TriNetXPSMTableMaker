@@ -66,8 +66,7 @@ for col in df_trimmed.columns:
 # Preset grouping checkboxes
 st.sidebar.subheader("🧩 Preset Group Rows")
 preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
-group_labels = []
-grouped_rows = []
+selected_groups = [label for label in preset_groups if st.sidebar.checkbox(label)]
 
 for label in preset_groups:
     if st.sidebar.checkbox(label):
@@ -75,8 +74,19 @@ for label in preset_groups:
         group_row["Characteristic Name"] = label
         grouped_rows.append(group_row)
 
-if grouped_rows:
-    df_trimmed = pd.concat([pd.DataFrame(grouped_rows), df_trimmed], ignore_index=True)
+if selected_groups:
+    # Remove any previous group rows before reinserting them in order
+    df_trimmed = df_trimmed[~df_trimmed["Characteristic Name"].isin(preset_groups)]
+    df_rebuilt = []
+    for group in selected_groups:
+        group_row = pd.Series(["" for _ in range(len(df_trimmed.columns))], index=df_trimmed.columns)
+        group_row["Characteristic Name"] = group
+        df_rebuilt.append(group_row)
+        # Add rows that follow the group label until the next group or end
+        while not df_trimmed.empty and df_trimmed.iloc[0]["Characteristic Name"] not in preset_groups:
+            df_rebuilt.append(df_trimmed.iloc[0])
+            df_trimmed = df_trimmed.iloc[1:]
+    df_trimmed = pd.DataFrame(df_rebuilt)
 
 if merge_duplicates:
     for merge_col in [col for col in df_trimmed.columns if col.strip() in ["Characteristic ID", "Characteristic Name"]]:
@@ -113,7 +123,7 @@ if edit_toggle:
 
     group_row_style = JsCode("""
     function(params) {
-        if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'])) {
+        if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'].trim())) {
             return {
                 'fontWeight': 'bold',
                 'backgroundColor': '#e6e6e6',
@@ -177,7 +187,7 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     css = get_journal_css(journal_style, font_size, h_align, v_align)
     html = css + "<table><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
     for _, row in df.iterrows():
-        if row["Characteristic Name"] in preset_groups:
+        if row["Characteristic Name"] in preset_groups or any(str(row["Characteristic Name"]).strip().lower() == label.lower() for label in preset_groups):
             html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row['Characteristic Name']}</td></tr>"
         else:
             html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row]) + "</tr>"
