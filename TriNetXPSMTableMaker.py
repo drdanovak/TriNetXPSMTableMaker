@@ -138,21 +138,10 @@ if edit_toggle:
 
     # Manual refresh toggle button
     st.markdown("### 🔁 Refresh Formatted Preview")
-    if st.button("🔄 Update Preview Table Now"):
-        st.session_state["refresh_preview"] = True
-    else:
-        st.session_state["refresh_preview"] = False
+    st.session_state["refresh_preview"] = st.button("🔄 Update Preview Table Now")
 
-    df_changed = not updated_df.equals(st.session_state["previous_df"])
+    # Skip auto-refresh logic — handled manually by button
     df_trimmed = updated_df
-
-    if df_changed and not st.session_state.get("rerun_triggered", False):
-        st.session_state["previous_df"] = updated_df.copy()
-        st.session_state["rerun_triggered"] = True
-        st.experimental_rerun()
-
-    # Reset rerun trigger after rerun
-    st.session_state["rerun_triggered"] = False
 
 
 
