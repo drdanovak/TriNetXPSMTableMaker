@@ -146,7 +146,7 @@ if edit_toggle:
 
     group_row_style = JsCode("""
     function(params) {
-        if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'].trim())) {
+        if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'] && params.data['Characteristic Name'].toString().trim())) {
             return {
                 'fontWeight': 'bold',
                 'backgroundColor': '#e6e6e6',
