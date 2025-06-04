@@ -68,14 +68,16 @@ for col in df_trimmed.columns:
 # Preset grouping checkboxes
 st.sidebar.subheader("🧩 Preset Group Rows")
 preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
-insert_rows = []
+group_labels = []
 for label in preset_groups:
     if st.sidebar.checkbox(label):
-        insert_rows.append(pd.Series([label] + ["" for _ in range(df_trimmed.shape[1] - 1)], index=df_trimmed.columns))
+        group_row = pd.Series([label] + ["" for _ in range(len(df_trimmed.columns) - 1)], index=df_trimmed.columns)
+        group_row["__is_group_row"] = True
+        group_labels.append(group_row)
 
-# Add grouping rows without overwriting data
-if insert_rows:
-    df_trimmed = pd.concat([pd.DataFrame(insert_rows), df_trimmed], ignore_index=True)
+if group_labels:
+    group_df = pd.DataFrame(group_labels)
+    df_trimmed = pd.concat([group_df, df_trimmed], ignore_index=True)
 
 # Merge duplicate values in Characteristic ID and Name regardless of order
 if merge_duplicates:
@@ -116,11 +118,11 @@ if edit_toggle:
     # Highlight group rows
     group_row_style = JsCode("""
     function(params) {
-        if (params.data && params.data['Characteristic Name'] &&
-            ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'])) {
+        if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'])) {
             return {
                 'fontWeight': 'bold',
-                'backgroundColor': '#e6e6e6'
+                'backgroundColor': '#e6e6e6',
+                'textAlign': 'left'
             }
         }
     }
@@ -139,7 +141,7 @@ if edit_toggle:
         reload_data=True
     )
 
-    df_trimmed = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"])
+    df_trimmed = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
 
 # CSS and HTML rendering
 
@@ -162,7 +164,7 @@ def get_journal_css(journal_style, font_size, h_align, v_align):
         background-color: #f2f2f2;
         font-weight: bold;
     }}
-    .group-row {{
+    .group-row td {{
         background-color: #e6e6e6;
         font-weight: bold;
         text-align: left;
@@ -174,7 +176,10 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     css = get_journal_css(journal_style, font_size, h_align, v_align)
     html = css + "<table><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
     for _, row in df.iterrows():
-        html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row]) + "</tr>"
+        if row["Characteristic Name"] in ["Demographics", "Conditions", "Lab Values", "Medications"]:
+            html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row['Characteristic Name']}</td></tr>"
+        else:
+            html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row]) + "</tr>"
     html += "</table>"
     return html
 
