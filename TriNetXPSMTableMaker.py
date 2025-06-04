@@ -1,102 +1,91 @@
 import streamlit as st
 import pandas as pd
-from io import BytesIO
-from docx import Document
-from docx.shared import Pt
-from fpdf import FPDF
+import numpy as np
 
-st.title("TriNetX Table Formatter for Journal Submission")
+st.set_page_config(layout="wide")
+st.title("🧾 TriNetX Table Formatter for Copy-Paste into Word")
 
-uploaded_file = st.file_uploader("Upload your TriNetX CSV file", type="csv")
+# Upload
+uploaded_file = st.file_uploader("📂 Upload your TriNetX CSV file", type="csv")
+if not uploaded_file:
+    st.stop()
+
+# Load and clean
+df_raw = pd.read_csv(uploaded_file)
 
 def extract_clean_table(df):
     for i, row in df.iterrows():
         if "Characteristic" in str(row[0]):
-            data_start_index = i
+            start = i
             break
-    df_clean = df.iloc[data_start_index:].reset_index(drop=True)
+    df_clean = df.iloc[start:].reset_index(drop=True)
     df_clean.columns = df_clean.iloc[0]
     df_clean = df_clean[1:].reset_index(drop=True)
     return df_clean
 
-def generate_word(df, font_size=10, align="left"):
-    doc = Document()
-    doc.add_heading('Formatted Table', level=1)
-    table = doc.add_table(rows=1, cols=len(df.columns))
-    table.style = 'Table Grid'
+df_clean = extract_clean_table(df_raw)
 
-    align_map = {"left": 0, "center": 1, "right": 2}
-    alignment = align_map.get(align, 0)
+# Sidebar formatting
+st.sidebar.header("🛠️ Display Options")
+font_size = st.sidebar.slider("Font Size (pt)", 6, 18, 10)
+alignment = st.sidebar.selectbox("Text Alignment", ["left", "center", "right"])
+merge_rows = st.sidebar.checkbox("Merge Repeated Row Labels", value=True)
 
-    hdr_cells = table.rows[0].cells
-    for i, col in enumerate(df.columns):
-        hdr_cells[i].text = str(col)
-        run = hdr_cells[i].paragraphs[0].runs[0]
-        run.font.size = Pt(font_size)
-        hdr_cells[i].paragraphs[0].alignment = alignment
+# Optional rounding
+decimals = st.sidebar.slider("Decimal Places", 0, 5, 2)
+df_display = df_clean.copy()
+for col in df_display.columns:
+    try:
+        df_display[col] = df_display[col].astype(float).round(decimals)
+    except:
+        pass
 
-    for _, row in df.iterrows():
-        row_cells = table.add_row().cells
-        for i, cell in enumerate(row):
-            row_cells[i].text = str(cell)
-            run = row_cells[i].paragraphs[0].runs[0]
-            run.font.size = Pt(font_size)
-            row_cells[i].paragraphs[0].alignment = alignment
+# Merge repeated labels
+def merge_rows_html(df, font_size, align):
+    align_css = {"left": "left", "center": "center", "right": "right"}[align]
+    html = f'<style>td, th {{ font-size: {font_size}pt; text-align: {align_css}; padding: 6px; border: 1px solid #888; border-collapse: collapse; }}</style>'
+    html += '<table style="border-collapse: collapse; width: 100%;">'
 
-    buf = BytesIO()
-    doc.save(buf)
-    buf.seek(0)
-    return buf
-
-def generate_pdf(df, font_size=8, align="L"):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=font_size)
-    col_width = pdf.w / (len(df.columns) + 1)
-    row_height = font_size + 2
-
+    # Headers
+    html += "<tr>"
     for col in df.columns:
-        pdf.cell(col_width, row_height, str(col), border=1, align=align)
-    pdf.ln(row_height)
+        html += f"<th>{col}</th>"
+    html += "</tr>"
 
-    for _, row in df.iterrows():
-        for item in row:
-            pdf.cell(col_width, row_height, str(item), border=1, align=align)
-        pdf.ln(row_height)
+    # Body with merged rows
+    last_seen = [""] * len(df.columns)
+    rowspan = [1] * len(df.columns)
+    skip_cell = [[False]*len(df.columns) for _ in range(len(df))]
 
-    buf = BytesIO()
-    pdf.output(buf)
-    buf.seek(0)
-    return buf
+    for col in range(len(df.columns)):
+        for row in range(1, len(df)):
+            if df.iloc[row, col] == df.iloc[row-1, col]:
+                rowspan[row - rowspan[col]][col] += 1
+                skip_cell[row][col] = True
+            else:
+                rowspan[row][col] = 1
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    cleaned_df = extract_clean_table(df)
+    for row in range(len(df)):
+        html += "<tr>"
+        for col in range(len(df.columns)):
+            if not skip_cell[row][col]:
+                cell = df.iloc[row, col]
+                span = rowspan[row][col]
+                if span > 1:
+                    html += f'<td rowspan="{span}">{cell}</td>'
+                else:
+                    html += f"<td>{cell}</td>"
+        html += "</tr>"
 
-    st.sidebar.header("Display Options")
-    decimals = st.sidebar.slider("Decimal Places", 0, 5, 2)
+    html += "</table>"
+    return html
 
-    export_font_size = st.sidebar.slider("Word Font Size", 6, 14, 10)
-    export_align = st.sidebar.selectbox("Word Text Alignment", ["left", "center", "right"])
+# Choose merge or not
+if merge_rows:
+    html = merge_rows_html(df_display, font_size, alignment)
+else:
+    html = df_display.to_html(index=False, border=1, escape=False)
 
-    pdf_font_size = st.sidebar.slider("PDF Font Size", 6, 14, 8)
-    pdf_align = st.sidebar.selectbox("PDF Text Alignment", ["L", "C", "R"])
-
-    df_display = cleaned_df.copy()
-    for col in df_display.columns:
-        try:
-            df_display[col] = df_display[col].astype(float).round(decimals)
-        except:
-            pass
-
-    st.markdown("### Preview of Cleaned Table")
-    st.dataframe(df_display)
-
-    csv = df_display.to_csv(index=False).encode('utf-8')
-    st.download_button("Download CSV", csv, "formatted_table.csv", "text/csv")
-
-    word_file = generate_word(df_display, font_size=export_font_size, align=export_align)
-    st.download_button("Download as Word", word_file, "formatted_table.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-
-    pdf_file = generate_pdf(df_display, font_size=pdf_font_size, align=pdf_align)
-    st.download_button("Download as PDF", pdf_file, "formatted_table.pdf", "application/pdf")
+# Output
+st.markdown("### 🧾 Copy This Table Below and Paste into Word")
+st.markdown(html, unsafe_allow_html=True)
