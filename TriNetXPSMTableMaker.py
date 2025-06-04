@@ -134,7 +134,14 @@ if edit_toggle:
         height=500,
         reload_data=True
     )
-    df_trimmed = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
+    updated_df = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
+
+    if "previous_df" not in st.session_state or not updated_df.equals(st.session_state["previous_df"]):
+        st.session_state["previous_df"] = updated_df.copy()
+        df_trimmed = updated_df
+        st.experimental_rerun()
+    else:
+        df_trimmed = updated_df
 
 # Final preview (always updated)
 def get_journal_css(journal_style, font_size, h_align, v_align):
