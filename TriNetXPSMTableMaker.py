@@ -79,15 +79,26 @@ for label in preset_groups:
 
 
 if selected_groups:
-    # Preserve order of existing rows and reinsert group headers
+    # Preserve original row order and insert group rows only for newly checked items
     current_rows = df_trimmed.to_dict("records")
-    cleaned_rows = [row for row in current_rows if str(row["Characteristic Name"]).strip() not in preset_groups]
     rebuilt_rows = []
+    i = 0
+    while i < len(current_rows):
+        row = current_rows[i]
+        name = str(row["Characteristic Name"]).strip()
+        if name in selected_groups:
+            rebuilt_rows.append(row)  # already a group row
+            i += 1
+        elif name in preset_groups:
+            i += 1  # skip old group rows that are not selected
+        else:
+            rebuilt_rows.append(row)
+            i += 1
     for group in selected_groups:
-        rebuilt_rows.append({col: "" for col in df_trimmed.columns})
-        rebuilt_rows[-1]["Characteristic Name"] = group
-        while cleaned_rows and str(cleaned_rows[0]["Characteristic Name"]).strip() not in preset_groups:
-            rebuilt_rows.append(cleaned_rows.pop(0))
+        if not any(str(row["Characteristic Name"]).strip() == group for row in rebuilt_rows):
+            group_row = {col: "" for col in df_trimmed.columns}
+            group_row["Characteristic Name"] = group
+            rebuilt_rows.insert(0, group_row)  # add new group rows at the top by default
     df_trimmed = pd.DataFrame(rebuilt_rows)
 
 if merge_duplicates:
