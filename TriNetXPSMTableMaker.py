@@ -43,7 +43,6 @@ available_columns = list(df_data.columns)
 filtered_columns = [col for col in default_columns if col in available_columns]
 df_trimmed = df_data[filtered_columns].copy()
 
-# Column selection and renaming
 with st.sidebar.expander("📋 Column Selection and Renaming", expanded=False):
     selected_columns = st.multiselect("Select columns to include", available_columns, default=filtered_columns)
     rename_dict = {}
@@ -54,7 +53,6 @@ df_trimmed = df_data[selected_columns].copy()
 df_trimmed.rename(columns=rename_dict, inplace=True)
 df_trimmed.fillna("", inplace=True)
 
-# Round numeric values and format p-values
 for col in df_trimmed.columns:
     try:
         df_trimmed[col] = df_trimmed[col].astype(float).round(decimal_places)
@@ -65,7 +63,33 @@ for col in df_trimmed.columns:
     if "p-Value" in col:
         df_trimmed[col] = df_trimmed[col].apply(lambda x: "p<.001" if str(x).strip() == "0" else x)
 
-# Column grouping
+# Preset grouping checkboxes
+st.sidebar.subheader("🧩 Preset Group Rows")
+preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
+group_labels = []
+grouped_rows = []
+
+for label in preset_groups:
+    if st.sidebar.checkbox(label):
+        group_row = pd.Series([label] + ["" for _ in range(len(df_trimmed.columns) - 1)], index=df_trimmed.columns)
+        group_row["Characteristic Name"] = label
+        grouped_rows.append(group_row)
+
+if grouped_rows:
+    df_trimmed = pd.concat([pd.DataFrame(grouped_rows), df_trimmed], ignore_index=True)
+
+if merge_duplicates:
+    for merge_col in [col for col in df_trimmed.columns if col.strip() in ["Characteristic ID", "Characteristic Name"]]:
+        prev = None
+        new_col = []
+        for val in df_trimmed[merge_col]:
+            if val == prev:
+                new_col.append("")
+            else:
+                new_col.append(val)
+                prev = val
+        df_trimmed[merge_col] = new_col
+
 if add_column_grouping:
     try:
         col_names = list(df_trimmed.columns)
@@ -75,17 +99,17 @@ if add_column_grouping:
     except Exception as e:
         st.error(f"Error applying column grouping: {e}")
 
-# Reset table
 if reset_table:
     df_trimmed = original_df[filtered_columns].copy()
 
-# Editable Table
+# Editable table
 if edit_toggle:
     st.subheader("📋 Editable Table")
     df_trimmed.insert(0, "Drag", "⇅")
     gb = GridOptionsBuilder.from_dataframe(df_trimmed)
     gb.configure_default_column(editable=True, resizable=True)
     gb.configure_column("Drag", header_name="", rowDrag=True, pinned="left", editable=False, width=50)
+    gb.configure_grid_options(rowDragManaged=True, animateRows=True)
 
     group_row_style = JsCode("""
     function(params) {
@@ -99,7 +123,6 @@ if edit_toggle:
     }
     """)
     gb.configure_grid_options(getRowStyle=group_row_style)
-    gb.configure_grid_options(rowDragManaged=True, animateRows=True)
 
     gridOptions = gb.build()
     grid_response = AgGrid(
@@ -113,36 +136,7 @@ if edit_toggle:
     )
     df_trimmed = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
 
-# Preset Group Row Settings (collected after editing)
-st.sidebar.subheader("🧩 Preset Group Rows")
-preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
-group_labels = []
-grouped_rows = []
-
-for label in preset_groups:
-    if st.sidebar.checkbox(label):
-        group_row = pd.Series(["" for _ in range(len(df_trimmed.columns))], index=df_trimmed.columns)
-        group_row["Characteristic Name"] = label
-        grouped_rows.append(group_row)
-
-# Add group rows after editing so they appear in preview
-if grouped_rows:
-    df_trimmed = pd.concat([pd.DataFrame(grouped_rows), df_trimmed], ignore_index=True)
-
-# Merge duplicate Characteristic ID/Name values
-if merge_duplicates:
-    for merge_col in [col for col in df_trimmed.columns if col.strip() in ["Characteristic ID", "Characteristic Name"]]:
-        prev = None
-        new_col = []
-        for val in df_trimmed[merge_col]:
-            if val == prev:
-                new_col.append("")
-            else:
-                new_col.append(val)
-                prev = val
-        df_trimmed[merge_col] = new_col
-
-# HTML styling and preview
+# Final preview (always updated)
 def get_journal_css(journal_style, font_size, h_align, v_align):
     return f"""
     <style>
@@ -185,7 +179,6 @@ html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, 
 st.markdown("### 🧾 Formatted Table Preview")
 st.markdown(html_table, unsafe_allow_html=True)
 
-# Copy to clipboard
 copy_button_html = f"""
 <div id="copy-container">
   <div id="copySource" contenteditable="true" style="position: absolute; left: -9999px;">
@@ -207,4 +200,4 @@ function copyTableToClipboard() {{
 }}
 </script>
 """
-components.html(copy_button_html, height=100)
+st.markdown(copy_button_html, unsafe_allow_html=True)
