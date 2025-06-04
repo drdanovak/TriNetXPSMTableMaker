@@ -136,10 +136,12 @@ if edit_toggle:
     )
     updated_df = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
 
-    # Only run this block if edit_toggle is enabled
-    if "previous_df" not in st.session_state:
-        st.session_state["previous_df"] = updated_df.copy()
-        st.session_state["rerun_triggered"] = False
+    # Manual refresh toggle button
+    st.markdown("### 🔁 Refresh Formatted Preview")
+    if st.button("🔄 Update Preview Table Now"):
+        st.session_state["refresh_preview"] = True
+    else:
+        st.session_state["refresh_preview"] = False
 
     df_changed = not updated_df.equals(st.session_state["previous_df"])
     df_trimmed = updated_df
@@ -193,7 +195,9 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     html += "</table>"
     return html
 
-html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
+html_table = ""
+if st.session_state.get("refresh_preview", True):
+    html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
 st.markdown("### 🧾 Formatted Table Preview")
 st.markdown(html_table, unsafe_allow_html=True)
 
