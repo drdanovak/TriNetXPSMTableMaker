@@ -55,41 +55,49 @@ for col in df_display.columns:
     except:
         pass
 
-# Merge repeated labels
+# ✅ Fixed merge_rows_html
 def merge_rows_html(df, font_size, align):
     align_css = {"left": "left", "center": "center", "right": "right"}[align]
-    html = f'<style>td, th {{ font-size: {font_size}pt; text-align: {align_css}; padding: 6px; border: 1px solid #888; border-collapse: collapse; }}</style>'
+    html = f'''
+    <style>
+        td, th {{
+            font-size: {font_size}pt;
+            text-align: {align_css};
+            padding: 6px;
+            border: 1px solid #888;
+            border-collapse: collapse;
+        }}
+    </style>
+    '''
     html += '<table style="border-collapse: collapse; width: 100%;">'
 
-    # Headers
+    # Header row
     html += "<tr>"
     for col in df.columns:
         html += f"<th>{col}</th>"
     html += "</tr>"
 
-    # Body with merged rows
-    last_seen = [""] * len(df.columns)
-    rowspan = [1] * len(df.columns)
-    skip_cell = [[False]*len(df.columns) for _ in range(len(df))]
+    # Precompute merge flags and spans
+    n_rows, n_cols = df.shape
+    skip_cell = [[False] * n_cols for _ in range(n_rows)]
+    merge_span = [[1] * n_cols for _ in range(n_rows)]
 
-    for col in range(len(df.columns)):
-        for row in range(1, len(df)):
-            if df.iloc[row, col] == df.iloc[row-1, col]:
-                rowspan[row - rowspan[col]][col] += 1
+    for col in range(n_cols):
+        for row in range(1, n_rows):
+            if df.iloc[row, col] == df.iloc[row - 1, col]:
+                merge_span[row - 1][col] += 1
                 skip_cell[row][col] = True
-            else:
-                rowspan[row][col] = 1
+                merge_span[row][col] = 0
 
-    for row in range(len(df)):
+    # Build HTML rows
+    for row in range(n_rows):
         html += "<tr>"
-        for col in range(len(df.columns)):
+        for col in range(n_cols):
             if not skip_cell[row][col]:
-                cell = df.iloc[row, col]
-                span = rowspan[row][col]
-                if span > 1:
-                    html += f'<td rowspan="{span}">{cell}</td>'
-                else:
-                    html += f"<td>{cell}</td>"
+                value = df.iloc[row, col]
+                span = merge_span[row][col]
+                rowspan_attr = f' rowspan="{span}"' if span > 1 else ""
+                html += f"<td{rowspan_attr}>{value}</td>"
         html += "</tr>"
 
     html += "</table>"
