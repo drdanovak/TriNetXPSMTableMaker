@@ -117,7 +117,7 @@ if edit_toggle:
     df_trimmed.insert(0, "Drag", "⇅")
     gb = GridOptionsBuilder.from_dataframe(df_trimmed)
     gb.configure_default_column(editable=True, resizable=True)
-    gb.configure_column("Drag", header_name="", rowDrag=True, pinned="left", editable=False, width=50)
+    gb.configure_column("Drag", header_name="⇅ Drag to Reorder (Click Lock to Confirm)", rowDrag=True, pinned="left", editable=False, width=250)
     gb.configure_grid_options(rowDragManaged=True, animateRows=True)
 
     group_row_style = JsCode("""
