@@ -10,14 +10,19 @@ uploaded_file = st.file_uploader("📂 Upload your TriNetX CSV file", type="csv"
 if not uploaded_file:
     st.stop()
 
-# Load and clean
-df_raw = pd.read_csv(uploaded_file, skiprows=9)  # Skip TriNetX headers
+# Load and trim TriNetX metadata rows
+df_raw = pd.read_csv(uploaded_file, skiprows=9)
 
+# ✅ Robust table extractor with fallback
 def extract_clean_table(df):
+    start = None
     for i, row in df.iterrows():
         if "Characteristic" in str(row[0]):
             start = i
             break
+    if start is None:
+        st.error("❌ Could not find a row containing 'Characteristic'. Please check your CSV file.")
+        st.stop()
     df_clean = df.iloc[start:].reset_index(drop=True)
     df_clean.columns = df_clean.iloc[0]
     df_clean = df_clean[1:].reset_index(drop=True)
@@ -25,7 +30,7 @@ def extract_clean_table(df):
 
 df_clean = extract_clean_table(df_raw)
 
-# ✅ Deduplicate column names
+# ✅ Safe deduplication of column names
 def deduplicate_columns(cols):
     seen = {}
     new_cols = []
@@ -40,7 +45,7 @@ def deduplicate_columns(cols):
 
 df_clean.columns = deduplicate_columns(df_clean.columns)
 
-# Sidebar formatting
+# Sidebar configuration
 st.sidebar.header("🛠️ Display Options")
 table_title = st.sidebar.text_input("Table Title", "Formatted TriNetX Table")
 font_size = st.sidebar.slider("Font Size (pt)", 6, 18, 10)
@@ -48,17 +53,16 @@ alignment = st.sidebar.selectbox("Text Alignment", ["left", "center", "right"])
 merge_rows = st.sidebar.checkbox("Merge Repeated Row Labels", value=True)
 decimals = st.sidebar.slider("Decimal Places", 0, 5, 2)
 
-# Format and round
+# Format data
 df_display = df_clean.copy()
 for col in df_display.columns:
     try:
         df_display[col] = df_display[col].astype(float).round(decimals)
     except:
         pass
+df_display = df_display.fillna("")  # ✅ Replace NaNs with blanks
 
-df_display = df_display.fillna("")  # ✅ Show blank instead of NaN
-
-# ✅ Fixed merge_rows_html
+# ✅ Corrected row-merging logic
 def merge_rows_html(df, font_size, align, title=None):
     align_css = {"left": "left", "center": "center", "right": "right"}[align]
     html = f'''
@@ -77,15 +81,11 @@ def merge_rows_html(df, font_size, align, title=None):
         }}
     </style>
     '''
-
     if title:
         html += f'<h3 style="font-size:{font_size + 2}pt; text-align:{align_css};">{title}</h3>'
 
     html += '<table>'
-    html += "<tr>"
-    for col in df.columns:
-        html += f"<th>{col}</th>"
-    html += "</tr>"
+    html += "<tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
 
     n_rows, n_cols = df.shape
     skip_cell = [[False] * n_cols for _ in range(n_rows)]
@@ -111,7 +111,7 @@ def merge_rows_html(df, font_size, align, title=None):
     html += "</table>"
     return html
 
-# ✅ HTML generation
+# Generate HTML
 if merge_rows:
     html = merge_rows_html(df_display, font_size, alignment, table_title)
 else:
@@ -121,11 +121,11 @@ else:
     }).to_html()
     html = f"<h3>{table_title}</h3>" + styled_table
 
-# ✅ Display HTML Table
+# Display HTML in Streamlit
 st.markdown("### 🧾 Copy This Table Below and Paste into Word")
 st.markdown(html, unsafe_allow_html=True)
 
-# ✅ Copy to clipboard button using JS
+# ✅ Copy-to-clipboard JavaScript button
 copy_script = f"""
 <button onclick="navigator.clipboard.writeText(document.getElementById('copy-table').innerHTML)">📋 Copy Table to Clipboard</button>
 <div id="copy-table" style="display:none;">{html}</div>
@@ -144,5 +144,4 @@ copy_script = f"""
     }};
 </script>
 """
-
 st.components.v1.html(copy_script, height=100)
