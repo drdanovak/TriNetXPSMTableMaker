@@ -201,6 +201,3 @@ function copyTableToClipboard() {{
 }}
 </script>
 """
-
-st.sidebar.subheader("📎 Copy Table to Clipboard")
-components.html(copy_button_html, height=130)
