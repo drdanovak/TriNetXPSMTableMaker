@@ -15,15 +15,13 @@ df_raw = pd.read_csv(uploaded_file, header=None, skiprows=9)
 df_raw.columns = df_raw.iloc[0]
 df_data = df_raw[1:].reset_index(drop=True)
 
-# Default columns (Updated Order)
+# Updated default columns and order with group markers
 default_columns = [
-    "Characteristic ID", "Characteristic Name", "Category",
-    "Cohort 1 Before: Patient Count", "Cohort 1 Before: % of Cohort", "Cohort 1 Before: Mean", "Cohort 1 Before: SD", "Cohort 1 Before: Min", "Cohort 1 Before: Max",
-    "Cohort 2 Before: Patient Count", "Cohort 2 Before: % of Cohort", "Cohort 2 Before: Mean", "Cohort 2 Before: SD", "Cohort 2 Before: Min", "Cohort 2 Before: Max",
-    "Before: p-Value", "Before: Standardized Mean Difference",
-    "Cohort 1 After: Patient Count", "Cohort 1 After: % of Cohort", "Cohort 1 After: Mean", "Cohort 1 After: SD", "Cohort 1 After: Min", "Cohort 1 After: Max",
-    "Cohort 2 After: Patient Count", "Cohort 2 After: % of Cohort", "Cohort 2 After: Mean", "Cohort 2 After: SD", "Cohort 2 After: Min", "Cohort 2 After: Max",
-    "After: p-Value", "After: Standardized Mean Difference"
+    "Characteristic Name", "Characteristic ID", "Category",
+    "Cohort 1 Before: Patient Count", "Cohort 1 Before: % of Cohort", "Cohort 1 Before: Mean", "Cohort 1 Before: SD",
+    "Cohort 2 Before: Patient Count", "Cohort 2 Before: % of Cohort", "Cohort 2 Before: Mean", "Cohort 2 Before: SD", "Before: p-Value", "Before: Standardized Mean Difference",
+    "Cohort 1 After: Patient Count", "Cohort 1 After: % of Cohort", "Cohort 1 After: Mean", "Cohort 1 After: SD",
+    "Cohort 2 After: Patient Count", "Cohort 2 After: % of Cohort", "Cohort 2 After: Mean", "Cohort 2 After: SD", "After: p-Value", "After: Standardized Mean Difference"
 ]
 
 available_columns = list(df_data.columns)
@@ -37,6 +35,7 @@ h_align = st.sidebar.selectbox("Text Horizontal Alignment", ["left", "center", "
 v_align = st.sidebar.selectbox("Text Vertical Alignment", ["top", "middle", "bottom"])
 journal_style = st.sidebar.selectbox("Journal Style", ["None", "NEJM", "AMA", "APA", "JAMA"])
 decimal_places = st.sidebar.slider("Round numerical values to", 0, 5, 2)
+edit_toggle = st.sidebar.checkbox("✏️ Edit Table")
 show_aggrid = st.sidebar.checkbox("🔽 Enable Drag-and-Drop Reordering")
 merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
 
@@ -62,48 +61,53 @@ for col in df_trimmed.columns:
     if "p-Value" in col:
         df_trimmed[col] = df_trimmed[col].apply(lambda x: "p<.001" if str(x).strip() == "0" else x)
 
-# Merge duplicate values in first column
-if merge_duplicates and len(df_trimmed.columns) > 0:
-    prev = None
-    new_col = []
-    for val in df_trimmed.iloc[:, 0]:
-        if val == prev:
-            new_col.append("")
-        else:
-            new_col.append(val)
-            prev = val
-    df_trimmed.iloc[:, 0] = new_col
+# Merge duplicate values in Characteristic ID and Name
+if merge_duplicates:
+    for merge_col in ["Characteristic ID", "Characteristic Name"]:
+        if merge_col in df_trimmed.columns:
+            prev = None
+            new_col = []
+            for val in df_trimmed[merge_col]:
+                if val == prev:
+                    new_col.append("")
+                else:
+                    new_col.append(val)
+                    prev = val
+            df_trimmed[merge_col] = new_col
 
-# Group row input
-group_input = st.text_input("🧩 Add group header rows (comma-separated row numbers)", "")
-group_indices = set()
-try:
-    if group_input.strip():
-        group_indices = set(int(i.strip()) for i in group_input.split(","))
-except:
-    st.sidebar.error("❌ Invalid group row numbers")
+# Preset grouping checkboxes
+st.sidebar.subheader("🧩 Preset Group Rows")
+preset_groups = {
+    "Demographics": 0,
+    "Conditions": 10,
+    "Lab Values": 20,
+    "Medications": 30
+}
+selected_groups = [label for label, index in preset_groups.items() if st.sidebar.checkbox(label)]
+group_indices = {preset_groups[label] for label in selected_groups}
 
-# Display Table
-st.subheader("📋 Editable Table")
-if show_aggrid:
-    gb = GridOptionsBuilder.from_dataframe(df_trimmed)
-    gb.configure_default_column(editable=True, resizable=True)
-    gb.configure_grid_options(rowDragManaged=True, animateRows=True)
-    gb.configure_selection(selection_mode="multiple")
-    gb.configure_grid_options(rowDrag=True)
-    gridOptions = gb.build()
+# Display Table if enabled
+if edit_toggle:
+    st.subheader("📋 Editable Table")
+    if show_aggrid:
+        gb = GridOptionsBuilder.from_dataframe(df_trimmed)
+        gb.configure_default_column(editable=True, resizable=True)
+        gb.configure_grid_options(rowDragManaged=True, animateRows=True)
+        gb.configure_selection(selection_mode="multiple")
+        gb.configure_grid_options(rowDrag=True)
+        gridOptions = gb.build()
 
-    grid_response = AgGrid(
-        df_trimmed,
-        gridOptions=gridOptions,
-        update_mode=GridUpdateMode.MODEL_CHANGED,
-        fit_columns_on_grid_load=True,
-        allow_unsafe_jscode=True,
-        height=500,
-        reload_data=True
-    )
+        grid_response = AgGrid(
+            df_trimmed,
+            gridOptions=gridOptions,
+            update_mode=GridUpdateMode.MODEL_CHANGED,
+            fit_columns_on_grid_load=True,
+            allow_unsafe_jscode=True,
+            height=500,
+            reload_data=True
+        )
 
-    df_trimmed = pd.DataFrame(grid_response["data"])
+        df_trimmed = pd.DataFrame(grid_response["data"])
 
 # CSS and HTML rendering
 def get_journal_css(journal_style, font_size, h_align, v_align):
@@ -171,4 +175,4 @@ function copyTableToClipboard() {{
 """
 
 st.sidebar.subheader("📎 Copy Table to Clipboard")
-components.html(copy_button_html, height=130)  # Show copy button
+components.html(copy_button_html, height=130)
