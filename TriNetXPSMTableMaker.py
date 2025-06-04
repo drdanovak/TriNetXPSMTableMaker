@@ -10,27 +10,19 @@ uploaded_file = st.file_uploader("📂 Upload your TriNetX CSV file", type="csv"
 if not uploaded_file:
     st.stop()
 
-# Load and trim TriNetX metadata rows
-df_raw = pd.read_csv(uploaded_file, skiprows=9)
+# ✅ Read from row 10 onward (row index 9), as "Characteristic ID" is typically there
+df_raw = pd.read_csv(uploaded_file, header=None)
 
-# ✅ Robust table extractor with fallback
+# Extract clean table from row 10 (0-based index 9)
 def extract_clean_table(df):
-    start = None
-    for i, row in df.iterrows():
-        if "Characteristic ID" in str(row[0]):
-            start = i
-            break
-    if start is None:
-        st.error("❌ Could not find a row containing 'Characteristic ID'. Please check your CSV file.")
-        st.stop()
-    df_clean = df.iloc[start:].reset_index(drop=True)
-    df_clean.columns = df_clean.iloc[0]
-    df_clean = df_clean[1:].reset_index(drop=True)
+    df_clean = df.iloc[9:].reset_index(drop=True)  # Start from row 10
+    df_clean.columns = df_clean.iloc[0]            # Row 10 becomes header
+    df_clean = df_clean[1:].reset_index(drop=True) # Remove header row from data
     return df_clean
 
 df_clean = extract_clean_table(df_raw)
 
-# ✅ Safe deduplication of column names
+# ✅ Deduplicate column names
 def deduplicate_columns(cols):
     seen = {}
     new_cols = []
