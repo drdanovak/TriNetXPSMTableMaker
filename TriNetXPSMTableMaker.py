@@ -132,8 +132,14 @@ if reset_table:
 # Editable table
 if edit_toggle:
     st.subheader("📋 Editable Table")
-    df_trimmed.insert(0, "Drag", "⇅")
-    gb = GridOptionsBuilder.from_dataframe(df_trimmed)
+
+    # Flatten df_trimmed if needed for AgGrid compatibility
+    aggrid_df = df_trimmed.copy()
+    if isinstance(aggrid_df.columns, pd.MultiIndex):
+        aggrid_df.columns = [' '.join(col).strip() for col in aggrid_df.columns]
+
+    aggrid_df.insert(0, "Drag", "⇅")
+    gb = GridOptionsBuilder.from_dataframe(aggrid_df)
     gb.configure_default_column(editable=True, resizable=True)
     gb.configure_column("Drag", header_name="⇅ Drag to Reorder (Click Lock to Confirm)", rowDrag=True, pinned="left", editable=False, width=250)
     gb.configure_grid_options(rowDragManaged=True, animateRows=True)
@@ -153,7 +159,7 @@ if edit_toggle:
 
     gridOptions = gb.build()
     grid_response = AgGrid(
-        df_trimmed,
+        aggrid_df,
         gridOptions=gridOptions,
         update_mode=GridUpdateMode.MODEL_CHANGED,
         fit_columns_on_grid_load=True,
