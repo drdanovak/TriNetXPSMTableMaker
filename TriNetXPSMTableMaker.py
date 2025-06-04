@@ -64,6 +64,7 @@ for col in df_trimmed.columns:
         df_trimmed[col] = df_trimmed[col].apply(lambda x: "p<.001" if str(x).strip() == "0" else x)
 
 # Preset grouping checkboxes
+preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
 st.sidebar.subheader("🧩 Preset Group Rows")
 custom_group_input = st.sidebar.text_input("Add Custom Group Name")
 if custom_group_input:
