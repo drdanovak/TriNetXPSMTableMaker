@@ -65,7 +65,11 @@ for col in df_trimmed.columns:
 
 # Preset grouping checkboxes
 st.sidebar.subheader("🧩 Preset Group Rows")
-preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
+custom_group_input = st.sidebar.text_input("Add Custom Group Name")
+if custom_group_input:
+    preset_groups.append(custom_group_input)
+    preset_groups = list(dict.fromkeys(preset_groups))  # remove duplicates while preserving order
+
 selected_groups = []
 for label in preset_groups:
     if st.sidebar.checkbox(label, key=f"group_checkbox_{label}"):
@@ -74,18 +78,16 @@ for label in preset_groups:
 
 
 if selected_groups:
-    # Remove any previous group rows before reinserting them in order
-    df_trimmed = df_trimmed[~df_trimmed["Characteristic Name"].isin(preset_groups)]
-    df_rebuilt = []
+    # Preserve order of existing rows and reinsert group headers
+    current_rows = df_trimmed.to_dict("records")
+    cleaned_rows = [row for row in current_rows if str(row["Characteristic Name"]).strip() not in preset_groups]
+    rebuilt_rows = []
     for group in selected_groups:
-        group_row = pd.Series(["" for _ in range(len(df_trimmed.columns))], index=df_trimmed.columns)
-        group_row["Characteristic Name"] = group
-        df_rebuilt.append(group_row)
-        # Add rows that follow the group label until the next group or end
-        while not df_trimmed.empty and df_trimmed.iloc[0]["Characteristic Name"] not in preset_groups:
-            df_rebuilt.append(df_trimmed.iloc[0])
-            df_trimmed = df_trimmed.iloc[1:]
-    df_trimmed = pd.DataFrame(df_rebuilt)
+        rebuilt_rows.append({col: "" for col in df_trimmed.columns})
+        rebuilt_rows[-1]["Characteristic Name"] = group
+        while cleaned_rows and str(cleaned_rows[0]["Characteristic Name"]).strip() not in preset_groups:
+            rebuilt_rows.append(cleaned_rows.pop(0))
+    df_trimmed = pd.DataFrame(rebuilt_rows)
 
 if merge_duplicates:
     for merge_col in [col for col in df_trimmed.columns if col.strip() in ["Characteristic ID", "Characteristic Name"]]:
