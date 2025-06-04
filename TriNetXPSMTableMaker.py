@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from io import StringIO
+import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide")
 st.title("🧾 TriNetX Table Formatter for Copy-Paste into Word")
@@ -54,7 +55,7 @@ for col in df_display.columns:
         pass
 df_display = df_display.fillna("")
 
-# Improved merge_rows_html
+# Merge function
 def merge_rows_html(df, font_size, align, title=None):
     align_css = {"left": "left", "center": "center", "right": "right"}[align]
     html = f'''
@@ -73,7 +74,6 @@ def merge_rows_html(df, font_size, align, title=None):
         }}
     </style>
     '''
-
     if title:
         html += f'<h3 style="font-size:{font_size + 2}pt; text-align:{align_css};">{title}</h3>'
 
@@ -87,9 +87,7 @@ def merge_rows_html(df, font_size, align, title=None):
         for col in range(n_cols):
             if merge_rows:
                 value = df.iloc[row, col]
-                # Only render the cell if it's the first in a run or the previous is different
                 if row == 0 or df.iloc[row, col] != df.iloc[row - 1, col]:
-                    # Count how many rows to span
                     span = 1
                     for next_row in range(row + 1, n_rows):
                         if df.iloc[next_row, col] == value:
@@ -99,7 +97,7 @@ def merge_rows_html(df, font_size, align, title=None):
                     rowspan_attr = f' rowspan="{span}"' if span > 1 else ""
                     html += f"<td{rowspan_attr}>{value}</td>"
                 else:
-                    continue  # skip repeated cell
+                    continue
             else:
                 html += f"<td>{df.iloc[row, col]}</td>"
         html += "</tr>"
@@ -113,8 +111,22 @@ html = merge_rows_html(df_display, font_size, alignment, table_title)
 st.markdown("### 🧾 Copy This Table Below and Paste into Word")
 st.markdown(html, unsafe_allow_html=True)
 
-# Sidebar clipboard block
-with st.sidebar:
-    st.subheader("📋 Copy HTML Table")
-    st.code(html, language="html")
-    st.markdown("⬆️ Right-click + Copy or use ⌘/Ctrl+C")
+# ✅ Sidebar: Copy button
+st.sidebar.subheader("📋 Copy HTML Table")
+components.html(f"""
+    <button onclick="copyTable()" style="padding:6px 12px; font-size:14px;">Copy Table to Clipboard</button>
+    <div id="tableContent" style="display:none;">{html}</div>
+    <script>
+    function copyTable() {{
+        const el = document.getElementById('tableContent');
+        const range = document.createRange();
+        range.selectNode(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        document.execCommand('copy');
+        sel.removeAllRanges();
+        alert('✅ Table copied to clipboard!');
+    }}
+    </script>
+""", height=100)
