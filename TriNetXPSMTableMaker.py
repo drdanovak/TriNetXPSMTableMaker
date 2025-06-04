@@ -116,9 +116,13 @@ if merge_duplicates:
 if add_column_grouping:
     try:
         col_names = list(df_trimmed.columns)
-        if len(col_names) == 24:
-            grouped_labels = col_names[:3] + ["Before Propensity Score Matching"] * 7 + ["After Propensity Score Matching"] * 14
-            df_trimmed.columns = pd.MultiIndex.from_arrays([grouped_labels, col_names])
+        before_cols = [col for col in col_names if 'Before:' in col or 'Before' in col and 'After' not in col]
+        after_cols = [col for col in col_names if 'After:' in col or 'After' in col]
+        first_cols = [col for col in col_names if col not in before_cols + after_cols]
+        new_order = first_cols + before_cols + after_cols
+        df_trimmed = df_trimmed[new_order]  # reorder
+        grouped_labels = first_cols + ["Before Propensity Score Matching"] * len(before_cols) + ["After Propensity Score Matching"] * len(after_cols)
+        df_trimmed.columns = pd.MultiIndex.from_arrays([grouped_labels, df_trimmed.columns])
     except Exception as e:
         st.error(f"Error applying column grouping headers: {e}")
 
