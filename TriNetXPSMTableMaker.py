@@ -111,22 +111,24 @@ html = merge_rows_html(df_display, font_size, alignment, table_title)
 st.markdown("### 🧾 Copy This Table Below and Paste into Word")
 st.markdown(html, unsafe_allow_html=True)
 
-# ✅ Sidebar: Copy button
+# --- SIDEBAR COPY BUTTON THAT WORKS ---
+from html import escape
+
+escaped_html = escape(html)  # Escape <, > for textarea
+
+copy_html_code = f"""
+<textarea id="htmlTable" style="width:100%; height:200px;">{escaped_html}</textarea>
+<button onclick="copyHTML()">📋 Copy Table to Clipboard</button>
+<script>
+function copyHTML() {{
+  var copyText = document.getElementById("htmlTable");
+  copyText.select();
+  document.execCommand("copy");
+  alert("✅ Table copied to clipboard!");
+}}
+</script>
+"""
+
 st.sidebar.subheader("📋 Copy HTML Table")
-components.html(f"""
-    <button onclick="copyTable()" style="padding:6px 12px; font-size:14px;">Copy Table to Clipboard</button>
-    <div id="tableContent" style="display:none;">{html}</div>
-    <script>
-    function copyTable() {{
-        const el = document.getElementById('tableContent');
-        const range = document.createRange();
-        range.selectNode(el);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        document.execCommand('copy');
-        sel.removeAllRanges();
-        alert('✅ Table copied to clipboard!');
-    }}
-    </script>
-""", height=100)
+components.html(copy_html_code, height=250)
+
