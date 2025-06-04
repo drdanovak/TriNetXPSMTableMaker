@@ -38,8 +38,7 @@ h_align = st.sidebar.selectbox("Text Horizontal Alignment", ["left", "center", "
 v_align = st.sidebar.selectbox("Text Vertical Alignment", ["top", "middle", "bottom"])
 journal_style = st.sidebar.selectbox("Journal Style", ["None", "NEJM", "AMA", "APA", "JAMA"])
 decimal_places = st.sidebar.slider("Round numerical values to", 0, 5, 2)
-edit_toggle = st.sidebar.checkbox("✏️ Edit Table")
-show_aggrid = st.sidebar.checkbox("🔽 Enable Drag-and-Drop Reordering")
+edit_toggle = st.sidebar.checkbox("✏️ Edit Table (with drag-and-drop)")
 merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
 add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators")
 reset_table = st.sidebar.button("🔄 Reset Table to Default")
@@ -97,11 +96,13 @@ for label in selected_groups:
 
 # Add column grouping separator if selected
 if add_column_grouping:
-    before_group = ["Before Propensity Score Matching"] * 7
-    after_group = ["After Propensity Score Matching"] * 7
-    col_names = list(df_trimmed.columns)
-    grouped_cols = col_names[:3] + before_group + after_group
-    df_trimmed.columns = grouped_cols
+    try:
+        col_names = list(df_trimmed.columns)
+        grouped_cols = col_names[:3] + ["Before Propensity Score Matching"] * 7 + ["After Propensity Score Matching"] * 7
+        if len(grouped_cols) == len(col_names):
+            df_trimmed.columns = grouped_cols
+    except Exception as e:
+        st.error(f"Error applying column grouping: {e}")
 
 # Reset table
 if reset_table:
@@ -110,42 +111,42 @@ if reset_table:
 # Display Table if enabled
 if edit_toggle:
     st.subheader("📋 Editable Table")
-    if show_aggrid:
-        df_trimmed.insert(0, "Drag", "⇅")
-        gb = GridOptionsBuilder.from_dataframe(df_trimmed)
-        gb.configure_default_column(editable=True, resizable=True)
-        gb.configure_column("Drag", header_name="", rowDrag=True, pinned="left", editable=False, width=50)
-        gb.configure_grid_options(rowDragManaged=True, animateRows=True)
+    df_trimmed.insert(0, "Drag", "⇅")
+    gb = GridOptionsBuilder.from_dataframe(df_trimmed)
+    gb.configure_default_column(editable=True, resizable=True)
+    gb.configure_column("Drag", header_name="", rowDrag=True, pinned="left", editable=False, width=50)
+    gb.configure_grid_options(rowDragManaged=True, animateRows=True)
 
-        # Highlight group rows
-        group_row_style = JsCode("""
-        function(params) {
-            if (params.data && params.data['Characteristic Name'] &&
-                ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'])) {
-                return {
-                    'fontWeight': 'bold',
-                    'backgroundColor': '#e6e6e6'
-                }
+    # Highlight group rows
+    group_row_style = JsCode("""
+    function(params) {
+        if (params.data && params.data['Characteristic Name'] &&
+            ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'])) {
+            return {
+                'fontWeight': 'bold',
+                'backgroundColor': '#e6e6e6'
             }
         }
-        """)
-        gb.configure_grid_options(getRowStyle=group_row_style)
+    }
+    """)
+    gb.configure_grid_options(getRowStyle=group_row_style)
 
-        gridOptions = gb.build()
+    gridOptions = gb.build()
 
-        grid_response = AgGrid(
-            df_trimmed,
-            gridOptions=gridOptions,
-            update_mode=GridUpdateMode.MODEL_CHANGED,
-            fit_columns_on_grid_load=True,
-            allow_unsafe_jscode=True,
-            height=500,
-            reload_data=True
-        )
+    grid_response = AgGrid(
+        df_trimmed,
+        gridOptions=gridOptions,
+        update_mode=GridUpdateMode.MODEL_CHANGED,
+        fit_columns_on_grid_load=True,
+        allow_unsafe_jscode=True,
+        height=500,
+        reload_data=True
+    )
 
-        df_trimmed = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"])
+    df_trimmed = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"])
 
 # CSS and HTML rendering
+
 def get_journal_css(journal_style, font_size, h_align, v_align):
     return f"""
     <style>
