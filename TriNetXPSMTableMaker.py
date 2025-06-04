@@ -136,6 +136,22 @@ if edit_toggle:
     )
     updated_df = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
 
+    # Only run this block if edit_toggle is enabled
+    if "previous_df" not in st.session_state:
+        st.session_state["previous_df"] = updated_df.copy()
+        st.session_state["rerun_triggered"] = False
+
+    df_changed = not updated_df.equals(st.session_state["previous_df"])
+    df_trimmed = updated_df
+
+    if df_changed and not st.session_state.get("rerun_triggered", False):
+        st.session_state["previous_df"] = updated_df.copy()
+        st.session_state["rerun_triggered"] = True
+        st.experimental_rerun()
+
+    # Reset rerun trigger after rerun
+    st.session_state["rerun_triggered"] = False
+
 if "previous_df" not in st.session_state:
     st.session_state["previous_df"] = updated_df.copy()
     st.session_state["rerun_triggered"] = False
