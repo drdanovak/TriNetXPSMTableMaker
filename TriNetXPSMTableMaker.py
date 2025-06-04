@@ -25,8 +25,20 @@ def extract_clean_table(df):
 
 df_clean = extract_clean_table(df_raw)
 
-# 🛠️ Fix: Deduplicate column names to avoid pyarrow error
-df_clean.columns = pd.io.parsers.ParserBase({'names': df_clean.columns})._maybe_dedup_names(df_clean.columns)
+# ✅ Deduplicate column names (safe method)
+def deduplicate_columns(cols):
+    seen = {}
+    new_cols = []
+    for col in cols:
+        if col not in seen:
+            seen[col] = 0
+            new_cols.append(col)
+        else:
+            seen[col] += 1
+            new_cols.append(f"{col}.{seen[col]}")
+    return new_cols
+
+df_clean.columns = deduplicate_columns(df_clean.columns)
 
 # Sidebar formatting
 st.sidebar.header("🛠️ Display Options")
