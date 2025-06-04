@@ -1,5 +1,4 @@
-# Final clean Streamlit app script without Styler rendering for maximum compatibility
-final_clean_script = """
+
 # streamlit_app.py
 import streamlit as st
 import pandas as pd
@@ -101,11 +100,3 @@ if uploaded_file is not None:
 
     pdf_file = generate_pdf(df_display, font_size=pdf_font_size, align=pdf_align)
     st.download_button("Download as PDF", pdf_file, "formatted_table.pdf", "application/pdf")
-"""
-
-# Save the final clean script
-final_script_path = "/mnt/data/streamlit_app_final_clean.py"
-with open(final_script_path, "w") as f:
-    f.write(final_clean_script)
-
-final_script_path
