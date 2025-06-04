@@ -1,9 +1,6 @@
-# Create the Streamlit-compatible version of the script
-streamlit_script = """
-# streamlit_app.py
+# triNetx_table_formatter.py
 import streamlit as st
 import pandas as pd
-import io
 
 st.title("TriNetX Table Formatter for Journal Submission")
 
@@ -50,11 +47,3 @@ if uploaded_file is not None:
 
     csv = df_display.to_csv(index=False).encode('utf-8')
     st.download_button("Download Cleaned Table as CSV", csv, "formatted_table.csv", "text/csv")
-"""
-
-# Save the Streamlit script
-streamlit_script_path = "/mnt/data/triNetX_streamlit_app.py"
-with open(streamlit_script_path, "w") as f:
-    f.write(streamlit_script)
-
-streamlit_script_path
