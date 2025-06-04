@@ -1,3 +1,5 @@
+# Final clean Streamlit app script without Styler rendering for maximum compatibility
+final_clean_script = """
 # streamlit_app.py
 import streamlit as st
 import pandas as pd
@@ -72,8 +74,7 @@ if uploaded_file is not None:
     cleaned_df = extract_clean_table(df)
 
     st.sidebar.header("Display Options")
-    show_gridlines = st.sidebar.checkbox("Show Gridlines", value=True)
-    bold_headers = st.sidebar.checkbox("Bold Headers", value=True)
+    bold_headers = st.sidebar.checkbox("Bold Headers (preview only)", value=True)
     decimals = st.sidebar.slider("Decimal Places", 0, 5, 2)
 
     export_font_size = st.sidebar.slider("Word Font Size", 6, 14, 10)
@@ -89,17 +90,8 @@ if uploaded_file is not None:
         except:
             pass
 
-    st.markdown("### Preview of Formatted Table")
-    if bold_headers:
-        st.write(f"<style>thead th {{ font-weight: bold; }}</style>", unsafe_allow_html=True)
-
-    if show_gridlines:
-        styled = df_display.style.set_table_styles(
-            [{'selector': 'td, th', 'props': [('border', '1px solid black')]}]
-        ).set_properties(**{'border': '1px solid black'})
-        st.write(styled)
-    else:
-        st.write(df_display)
+    st.markdown("### Preview of Cleaned Table")
+    st.dataframe(df_display)  # Reliable preview without styling
 
     csv = df_display.to_csv(index=False).encode('utf-8')
     st.download_button("Download CSV", csv, "formatted_table.csv", "text/csv")
@@ -109,3 +101,11 @@ if uploaded_file is not None:
 
     pdf_file = generate_pdf(df_display, font_size=pdf_font_size, align=pdf_align)
     st.download_button("Download as PDF", pdf_file, "formatted_table.pdf", "application/pdf")
+"""
+
+# Save the final clean script
+final_script_path = "/mnt/data/streamlit_app_final_clean.py"
+with open(final_script_path, "w") as f:
+    f.write(final_clean_script)
+
+final_script_path
