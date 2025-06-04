@@ -58,6 +58,3 @@ edit_toggle = st.sidebar.checkbox("✏️ Edit Table (with drag-and-drop)")
 merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
 add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators")
 reset_table = st.sidebar.button("🔄 Reset Table to Default")
-
-# Updated default columns and order with group markers
-... (REMAINDER OF ORIGINAL CODE UNCHANGED)
