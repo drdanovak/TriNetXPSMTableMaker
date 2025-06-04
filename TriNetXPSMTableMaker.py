@@ -23,17 +23,18 @@ v_align = st.sidebar.selectbox("Text Vertical Alignment", ["top", "middle", "bot
 journal_style = st.sidebar.selectbox("Journal Style", ["None", "NEJM", "AMA", "APA", "JAMA"])
 group_input = st.sidebar.text_input("Row numbers for group headers (comma-separated)", "")
 
-# Column selection and renaming
-st.subheader("📋 Column Selection and Renaming")
+# Column selection and renaming in sidebar expander
 columns = list(df_data.columns)
 default_selected = columns[:10]
-selected = st.multiselect("Select columns to include", columns, default=default_selected)
-
 rename_dict = {}
-for col in selected:
-    new_name = st.text_input(f"Rename '{col}'", value=col, key=f"rename_{col}")
-    rename_dict[col] = new_name
 
+with st.sidebar.expander("📋 Column Selection and Renaming", expanded=True):
+    selected = st.multiselect("Select columns to include", columns, default=default_selected)
+    for col in selected:
+        new_name = st.text_input(f"Rename '{col}'", value=col, key=f"rename_{col}")
+        rename_dict[col] = new_name
+
+# Trim and rename
 df_trimmed = df_data[selected].copy()
 df_trimmed.rename(columns=rename_dict, inplace=True)
 df_trimmed.fillna("", inplace=True)
@@ -53,7 +54,7 @@ def deduplicate_first_column(df):
 
 df_trimmed = deduplicate_first_column(df_trimmed)
 
-# Manual group header parsing
+# Group header parsing
 group_indices = set()
 try:
     if group_input.strip():
@@ -101,13 +102,12 @@ def generate_html_table(df, group_rows, journal_style, font_size, h_align, v_ali
     html += "</table>"
     return html
 
+# Generate and show table
 html_table = generate_html_table(df_trimmed, group_indices, journal_style, font_size, h_align, v_align)
-
-# Display table
 st.markdown("### 🧾 Copy-Ready Table")
 st.markdown(html_table, unsafe_allow_html=True)
 
-# Sidebar: Copy to clipboard
+# Copy button in sidebar
 copy_button_html = f"""
 <div style="display:none;" id="copySource" contenteditable="true">
     {html_table}
