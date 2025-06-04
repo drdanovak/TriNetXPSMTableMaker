@@ -216,7 +216,8 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     else:
         html += "<tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
     for _, row in df.iterrows():
-        if row["Characteristic Name"] in preset_groups or any(str(row["Characteristic Name"]).strip().lower() == label.lower() for label in preset_groups):
+        char_name = row.get("Characteristic Name", None)
+        if char_name is not None and (char_name in preset_groups or any(str(char_name).strip().lower() == label.lower() for label in preset_groups)):
             html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row['Characteristic Name']}</td></tr>"
         else:
             html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row]) + "</tr>"
