@@ -28,6 +28,7 @@ decimal_places = st.sidebar.slider("Round numerical values to", 0, 5, 2)
 edit_toggle = st.sidebar.checkbox("✏️ Edit Table (with drag-and-drop)")
 merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
 add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators")
+column_grouping_enabled = st.sidebar.checkbox("🧱 Show Column Group Headers")
 reset_table = st.sidebar.button("🔄 Reset Table to Default")
 
 # Updated default columns and order with group markers
@@ -118,9 +119,9 @@ if add_column_grouping:
         col_names = list(df_trimmed.columns)
         grouped_cols = col_names[:3] + ["Before Propensity Score Matching"] * 7 + ["After Propensity Score Matching"] * 7
         if len(grouped_cols) == len(col_names):
-            df_trimmed.columns = grouped_cols
+            df_trimmed.columns = pd.MultiIndex.from_arrays([grouped_cols, col_names])
     except Exception as e:
-        st.error(f"Error applying column grouping: {e}")
+        st.error(f"Error applying column grouping headers: {e}")
 
 if reset_table:
     df_trimmed = original_df[filtered_columns].copy()
@@ -198,7 +199,13 @@ def get_journal_css(journal_style, font_size, h_align, v_align):
 
 def generate_html_table(df, journal_style, font_size, h_align, v_align):
     css = get_journal_css(journal_style, font_size, h_align, v_align)
-    html = css + "<table><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
+    html = css + "<table>"
+    if column_grouping_enabled and isinstance(df.columns, pd.MultiIndex):
+        group_row = "<tr>" + "".join([f"<th colspan='1'>{grp}</th>" for grp in df.columns.get_level_values(0)]) + "</tr>"
+        subheader_row = "<tr>" + "".join([f"<th>{sub}</th>" for sub in df.columns.get_level_values(1)]) + "</tr>"
+        html += group_row + subheader_row
+    else:
+        html += "<tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
     for _, row in df.iterrows():
         if row["Characteristic Name"] in preset_groups or any(str(row["Characteristic Name"]).strip().lower() == label.lower() for label in preset_groups):
             html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row['Characteristic Name']}</td></tr>"
