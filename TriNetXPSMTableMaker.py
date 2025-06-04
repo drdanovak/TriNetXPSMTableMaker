@@ -3,34 +3,27 @@ import pandas as pd
 import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide")
-st.title("📊 TriNetX NEJM/AMA-Style Table Formatter")
+st.title("📊 TriNetX Journal-Style Table Formatter")
 
+# Upload
 uploaded_file = st.file_uploader("📂 Upload your TriNetX CSV file", type="csv")
 if not uploaded_file:
     st.stop()
 
-# Load and clean data
+# Load and clean
 df_raw = pd.read_csv(uploaded_file, header=None, skiprows=9)
 df_raw.columns = df_raw.iloc[0]
 df_data = df_raw[1:].reset_index(drop=True)
 
-# Sidebar Controls
+# Sidebar controls
 st.sidebar.header("🛠️ Table Settings")
 font_size = st.sidebar.slider("Font Size", 6, 18, 10)
 h_align = st.sidebar.selectbox("Text Horizontal Alignment", ["left", "center", "right"])
 v_align = st.sidebar.selectbox("Text Vertical Alignment", ["top", "middle", "bottom"])
 journal_style = st.sidebar.selectbox("Journal Style", ["None", "NEJM", "AMA", "APA", "JAMA"])
-group_input = st.sidebar.text_input("Group header row numbers (comma-separated)", "")
+group_input = st.sidebar.text_input("Row numbers for group headers (comma-separated)", "")
 
-# Parse group header rows
-group_indices = set()
-try:
-    if group_input.strip():
-        group_indices = set(int(i.strip()) for i in group_input.split(","))
-except:
-    st.sidebar.error("❌ Invalid row numbers")
-
-# Simplified Column Management
+# Column selection and renaming
 st.subheader("📋 Column Selection and Renaming")
 columns = list(df_data.columns)
 default_selected = columns[:10]
@@ -45,7 +38,30 @@ df_trimmed = df_data[selected].copy()
 df_trimmed.rename(columns=rename_dict, inplace=True)
 df_trimmed.fillna("", inplace=True)
 
-# Journal CSS Styling
+# Remove repeated row labels in first column
+def deduplicate_first_column(df):
+    prev = None
+    new_col = []
+    for val in df.iloc[:, 0]:
+        if val == prev:
+            new_col.append("")
+        else:
+            new_col.append(val)
+            prev = val
+    df.iloc[:, 0] = new_col
+    return df
+
+df_trimmed = deduplicate_first_column(df_trimmed)
+
+# Manual group header parsing
+group_indices = set()
+try:
+    if group_input.strip():
+        group_indices = set(int(i.strip()) for i in group_input.split(","))
+except:
+    st.sidebar.error("❌ Invalid row numbers")
+
+# Journal CSS
 def get_journal_css(journal_style, font_size, h_align, v_align):
     return f"""
     <style>
@@ -54,7 +70,6 @@ def get_journal_css(journal_style, font_size, h_align, v_align):
         width: 100%;
         font-family: Arial, sans-serif;
         font-size: {font_size}pt;
-        text-align: {h_align};
     }}
     th, td {{
         border: 1px solid black;
@@ -74,7 +89,7 @@ def get_journal_css(journal_style, font_size, h_align, v_align):
     </style>
     """
 
-# HTML Table Generator
+# Render table
 def generate_html_table(df, group_rows, journal_style, font_size, h_align, v_align):
     css = get_journal_css(journal_style, font_size, h_align, v_align)
     html = css + "<table><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
@@ -86,12 +101,13 @@ def generate_html_table(df, group_rows, journal_style, font_size, h_align, v_ali
     html += "</table>"
     return html
 
-# Generate and render HTML
 html_table = generate_html_table(df_trimmed, group_indices, journal_style, font_size, h_align, v_align)
-st.markdown("### 🧾 Table Preview (Copy-Paste into Word Below)")
+
+# Display table
+st.markdown("### 🧾 Copy-Ready Table")
 st.markdown(html_table, unsafe_allow_html=True)
 
-# Sidebar clipboard button
+# Sidebar: Copy to clipboard
 copy_button_html = f"""
 <div style="display:none;" id="copySource" contenteditable="true">
     {html_table}
