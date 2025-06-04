@@ -15,6 +15,9 @@ df_raw = pd.read_csv(uploaded_file, header=None, skiprows=9)
 df_raw.columns = df_raw.iloc[0]
 df_data = df_raw[1:].reset_index(drop=True)
 
+# Store original for reset
+original_df = df_data.copy()
+
 # Updated default columns and order with group markers
 default_columns = [
     "Characteristic Name", "Characteristic ID", "Category",
@@ -38,6 +41,8 @@ decimal_places = st.sidebar.slider("Round numerical values to", 0, 5, 2)
 edit_toggle = st.sidebar.checkbox("✏️ Edit Table")
 show_aggrid = st.sidebar.checkbox("🔽 Enable Drag-and-Drop Reordering")
 merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
+add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators")
+reset_table = st.sidebar.button("🔄 Reset Table to Default")
 
 with st.sidebar.expander("📋 Column Selection and Renaming", expanded=False):
     selected_columns = st.multiselect("Select columns to include", available_columns, default=filtered_columns)
@@ -86,6 +91,22 @@ preset_groups = {
 selected_groups = [label for label, index in preset_groups.items() if st.sidebar.checkbox(label)]
 group_indices = {preset_groups[label] for label in selected_groups}
 
+# Add grouping row titles
+for label in selected_groups:
+    df_trimmed.loc[preset_groups[label]] = [label] + ["" for _ in range(df_trimmed.shape[1] - 1)]
+
+# Add column grouping separator if selected
+if add_column_grouping:
+    before_group = ["Before Propensity Score Matching"] * 7
+    after_group = ["After Propensity Score Matching"] * 7
+    col_names = list(df_trimmed.columns)
+    grouped_cols = col_names[:3] + before_group + after_group
+    df_trimmed.columns = grouped_cols
+
+# Reset table
+if reset_table:
+    df_trimmed = original_df[filtered_columns].copy()
+
 # Display Table if enabled
 if edit_toggle:
     st.subheader("📋 Editable Table")
@@ -95,7 +116,21 @@ if edit_toggle:
         gb.configure_default_column(editable=True, resizable=True)
         gb.configure_column("Drag", header_name="", rowDrag=True, pinned="left", editable=False, width=50)
         gb.configure_grid_options(rowDragManaged=True, animateRows=True)
-        gb.configure_selection(selection_mode="multiple")
+
+        # Highlight group rows
+        group_row_style = JsCode("""
+        function(params) {
+            if (params.data && params.data['Characteristic Name'] &&
+                ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'])) {
+                return {
+                    'fontWeight': 'bold',
+                    'backgroundColor': '#e6e6e6'
+                }
+            }
+        }
+        """)
+        gb.configure_grid_options(getRowStyle=group_row_style)
+
         gridOptions = gb.build()
 
         grid_response = AgGrid(
