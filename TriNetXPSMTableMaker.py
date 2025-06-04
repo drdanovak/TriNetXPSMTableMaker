@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from io import StringIO
 
 st.set_page_config(layout="wide")
 st.title("🧾 TriNetX Table Formatter for Copy-Paste into Word")
@@ -10,19 +11,18 @@ uploaded_file = st.file_uploader("📂 Upload your TriNetX CSV file", type="csv"
 if not uploaded_file:
     st.stop()
 
-# ✅ Read from row 10 onward (row index 9), as "Characteristic ID" is typically there
+# Read raw data from row 10
 df_raw = pd.read_csv(uploaded_file, header=None)
 
-# Extract clean table from row 10 (0-based index 9)
 def extract_clean_table(df):
-    df_clean = df.iloc[9:].reset_index(drop=True)  # Start from row 10
-    df_clean.columns = df_clean.iloc[0]            # Row 10 becomes header
-    df_clean = df_clean[1:].reset_index(drop=True) # Remove header row from data
+    df_clean = df.iloc[9:].reset_index(drop=True)
+    df_clean.columns = df_clean.iloc[0]
+    df_clean = df_clean[1:].reset_index(drop=True)
     return df_clean
 
 df_clean = extract_clean_table(df_raw)
 
-# ✅ Deduplicate column names
+# Deduplicate columns
 def deduplicate_columns(cols):
     seen = {}
     new_cols = []
@@ -37,7 +37,7 @@ def deduplicate_columns(cols):
 
 df_clean.columns = deduplicate_columns(df_clean.columns)
 
-# Sidebar configuration
+# Sidebar
 st.sidebar.header("🛠️ Display Options")
 table_title = st.sidebar.text_input("Table Title", "Formatted TriNetX Table")
 font_size = st.sidebar.slider("Font Size (pt)", 6, 18, 10)
@@ -52,9 +52,9 @@ for col in df_display.columns:
         df_display[col] = df_display[col].astype(float).round(decimals)
     except:
         pass
-df_display = df_display.fillna("")  # ✅ Replace NaNs with blanks
+df_display = df_display.fillna("")
 
-# ✅ Corrected row-merging logic
+# Improved merge_rows_html
 def merge_rows_html(df, font_size, align, title=None):
     align_css = {"left": "left", "center": "center", "right": "right"}[align]
     html = f'''
@@ -73,6 +73,7 @@ def merge_rows_html(df, font_size, align, title=None):
         }}
     </style>
     '''
+
     if title:
         html += f'<h3 style="font-size:{font_size + 2}pt; text-align:{align_css};">{title}</h3>'
 
@@ -80,60 +81,40 @@ def merge_rows_html(df, font_size, align, title=None):
     html += "<tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
 
     n_rows, n_cols = df.shape
-    skip_cell = [[False] * n_cols for _ in range(n_rows)]
-    merge_span = [[1] * n_cols for _ in range(n_rows)]
-
-    for col in range(n_cols):
-        for row in range(1, n_rows):
-            if df.iloc[row, col] == df.iloc[row - 1, col] and df.iloc[row, col] != "":
-                merge_span[row - 1][col] += 1
-                skip_cell[row][col] = True
-                merge_span[row][col] = 0
 
     for row in range(n_rows):
         html += "<tr>"
         for col in range(n_cols):
-            if not skip_cell[row][col]:
+            if merge_rows:
                 value = df.iloc[row, col]
-                span = merge_span[row][col]
-                rowspan_attr = f' rowspan="{span}"' if span > 1 else ""
-                html += f"<td{rowspan_attr}>{value}</td>"
+                # Only render the cell if it's the first in a run or the previous is different
+                if row == 0 or df.iloc[row, col] != df.iloc[row - 1, col]:
+                    # Count how many rows to span
+                    span = 1
+                    for next_row in range(row + 1, n_rows):
+                        if df.iloc[next_row, col] == value:
+                            span += 1
+                        else:
+                            break
+                    rowspan_attr = f' rowspan="{span}"' if span > 1 else ""
+                    html += f"<td{rowspan_attr}>{value}</td>"
+                else:
+                    continue  # skip repeated cell
+            else:
+                html += f"<td>{df.iloc[row, col]}</td>"
         html += "</tr>"
-
     html += "</table>"
     return html
 
 # Generate HTML
-if merge_rows:
-    html = merge_rows_html(df_display, font_size, alignment, table_title)
-else:
-    styled_table = df_display.style.set_properties(**{
-        'text-align': alignment,
-        'font-size': f"{font_size}pt"
-    }).to_html()
-    html = f"<h3>{table_title}</h3>" + styled_table
+html = merge_rows_html(df_display, font_size, alignment, table_title)
 
-# Display HTML in Streamlit
+# Display Table
 st.markdown("### 🧾 Copy This Table Below and Paste into Word")
 st.markdown(html, unsafe_allow_html=True)
 
-# ✅ Copy-to-clipboard JavaScript button
-copy_script = f"""
-<button onclick="navigator.clipboard.writeText(document.getElementById('copy-table').innerHTML)">📋 Copy Table to Clipboard</button>
-<div id="copy-table" style="display:none;">{html}</div>
-<script>
-    const btn = document.currentScript.previousElementSibling;
-    btn.onclick = function() {{
-        const tempDiv = document.getElementById('copy-table');
-        const range = document.createRange();
-        range.selectNode(tempDiv);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        document.execCommand('copy');
-        sel.removeAllRanges();
-        alert('✅ Table copied to clipboard!');
-    }};
-</script>
-"""
-st.components.v1.html(copy_script, height=100)
+# Sidebar clipboard block
+with st.sidebar:
+    st.subheader("📋 Copy HTML Table")
+    st.code(html, language="html")
+    st.markdown("⬆️ Right-click + Copy or use ⌘/Ctrl+C")
