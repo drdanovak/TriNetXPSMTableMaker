@@ -138,14 +138,13 @@ if edit_toggle:
 
     if "previous_df" not in st.session_state:
     st.session_state["previous_df"] = updated_df.copy()
+
 df_changed = not updated_df.equals(st.session_state["previous_df"])
 df_trimmed = updated_df
 
 if df_changed:
     st.session_state["previous_df"] = updated_df.copy()
     st.stop()
-    else:
-        df_trimmed = updated_df
 
 # Final preview (always updated)
 def get_journal_css(journal_style, font_size, h_align, v_align):
