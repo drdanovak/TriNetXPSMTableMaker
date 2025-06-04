@@ -136,10 +136,14 @@ if edit_toggle:
     )
     updated_df = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
 
-    if "previous_df" not in st.session_state or not updated_df.equals(st.session_state["previous_df"]):
-        st.session_state["previous_df"] = updated_df.copy()
-        df_trimmed = updated_df
-        st.experimental_rerun()
+    if "previous_df" not in st.session_state:
+    st.session_state["previous_df"] = updated_df.copy()
+df_changed = not updated_df.equals(st.session_state["previous_df"])
+df_trimmed = updated_df
+
+if df_changed:
+    st.session_state["previous_df"] = updated_df.copy()
+    st.stop()
     else:
         df_trimmed = updated_df
 
