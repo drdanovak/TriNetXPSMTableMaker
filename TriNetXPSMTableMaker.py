@@ -1,53 +1,55 @@
-import pandas as pd
 import streamlit as st
+import pandas as pd
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide")
-st.title("📊 TriNetX Journal-Style Table Formatter")
+st.title("📊 TriNetX Journal-Style Table Formatter with Row Reordering")
 
-# Upload and load CSV
 uploaded_file = st.file_uploader("📂 Upload your TriNetX CSV file", type="csv")
 if not uploaded_file:
     st.stop()
 
+# Load and clean CSV
 df_raw = pd.read_csv(uploaded_file, header=None, skiprows=9)
 df_raw.columns = df_raw.iloc[0]
 df_data = df_raw[1:].reset_index(drop=True)
 
-# Sidebar settings
+# Sidebar Controls
 st.sidebar.header("🛠️ Table Settings")
 font_size = st.sidebar.slider("Font Size", 6, 18, 10)
 h_align = st.sidebar.selectbox("Text Horizontal Alignment", ["left", "center", "right"])
 v_align = st.sidebar.selectbox("Text Vertical Alignment", ["top", "middle", "bottom"])
 journal_style = st.sidebar.selectbox("Journal Style", ["None", "NEJM", "AMA", "APA", "JAMA"])
-decimals = st.sidebar.slider("Decimal Places", 0, 5, 2)
-group_input = st.sidebar.text_input("Row numbers for group headers (comma-separated)", "")
+decimal_places = st.sidebar.slider("Round numerical values to:", 0, 5, 2)
+group_input = st.sidebar.text_input("Group header row numbers (comma-separated)", "")
 
 # Column selection and renaming
-columns = list(df_data.columns)
-selected = st.multiselect("Select columns to include", columns, default=columns)
-rename_dict = {}
-with st.sidebar.expander("📋 Rename Columns"):
-    for col in selected:
-        new_name = st.text_input(f"Rename '{col}'", value=col, key=f"rename_{col}")
-        rename_dict[col] = new_name
+with st.sidebar.expander("📋 Column Selection and Renaming", expanded=True):
+    all_columns = list(df_data.columns)
+    selected_columns = st.multiselect("Select columns to include", all_columns, default=all_columns)
+    rename_dict = {}
+    for col in selected_columns:
+        rename_dict[col] = st.text_input(f"Rename '{col}'", col, key=f"rename_{col}")
 
-# Filter and rename
-df_trimmed = df_data[selected].copy()
+# Clean and rename
+df_trimmed = df_data[selected_columns].copy()
 df_trimmed.rename(columns=rename_dict, inplace=True)
 df_trimmed.fillna("", inplace=True)
 
-# Format numeric columns and p-values
+# Round numeric columns
 for col in df_trimmed.columns:
-    if "Before: p-Value" in col or "After: p-Value" in col:
-        df_trimmed[col] = df_trimmed[col].replace("0", "p<.001")
-    else:
-        try:
-            df_trimmed[col] = df_trimmed[col].astype(float).round(decimals)
-        except:
-            continue
+    try:
+        df_trimmed[col] = df_trimmed[col].astype(float).round(decimal_places)
+    except:
+        continue
 
-# Remove repeated row labels
+# Replace "0" with "p<.001" for p-values
+for col in df_trimmed.columns:
+    if "p-Value" in col:
+        df_trimmed[col] = df_trimmed[col].apply(lambda x: "p<.001" if str(x).strip() == "0" else x)
+
+# Deduplicate first column
 def deduplicate_first_column(df):
     prev = None
     new_col = []
@@ -62,7 +64,28 @@ def deduplicate_first_column(df):
 
 df_trimmed = deduplicate_first_column(df_trimmed)
 
-# Parse group rows
+# Drag-and-drop via AgGrid
+st.subheader("🖱️ Drag and Reorder Table")
+gb = GridOptionsBuilder.from_dataframe(df_trimmed)
+gb.configure_default_column(editable=True, resizable=True)
+gb.configure_grid_options(rowDragManaged=True, animateRows=True)
+gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+gridOptions = gb.build()
+
+grid_response = AgGrid(
+    df_trimmed,
+    gridOptions=gridOptions,
+    update_mode=GridUpdateMode.MANUAL,
+    fit_columns_on_grid_load=True,
+    enable_enterprise_modules=False,
+    allow_unsafe_jscode=True,
+    height=500,
+    reload_data=True
+)
+
+df_ordered = pd.DataFrame(grid_response["data"])
+
+# Parse group headers
 group_indices = set()
 try:
     if group_input.strip():
@@ -70,17 +93,8 @@ try:
 except:
     st.sidebar.error("❌ Invalid row numbers")
 
-# Inline editing
-st.subheader("✏️ Edit Table Inline")
-edited_df = st.data_editor(df_trimmed, num_rows="dynamic")
-
-# Row reordering
-st.subheader("🔀 Reorder Rows")
-row_order = st.multiselect("Select new row order (by original index)", options=edited_df.index.tolist(), default=edited_df.index.tolist())
-df_reordered = edited_df.loc[row_order].reset_index(drop=True)
-
-# CSS generator
-def get_journal_css(style, font_size, h_align, v_align):
+# CSS style generator
+def get_journal_css(journal_style, font_size, h_align, v_align):
     return f"""
     <style>
     table {{
@@ -107,7 +121,7 @@ def get_journal_css(style, font_size, h_align, v_align):
     </style>
     """
 
-# Render HTML table
+# HTML Table Renderer
 def generate_html_table(df, group_rows, journal_style, font_size, h_align, v_align):
     css = get_journal_css(journal_style, font_size, h_align, v_align)
     html = css + "<table><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
@@ -119,12 +133,12 @@ def generate_html_table(df, group_rows, journal_style, font_size, h_align, v_ali
     html += "</table>"
     return html
 
-# Display table
+# Final table
+html_table = generate_html_table(df_ordered, group_indices, journal_style, font_size, h_align, v_align)
 st.markdown("### 🧾 Copy-Ready Table")
-html_table = generate_html_table(df_reordered, group_indices, journal_style, font_size, h_align, v_align)
 st.markdown(html_table, unsafe_allow_html=True)
 
-# Copy-to-clipboard
+# Copy button
 copy_button_html = f"""
 <div style="display:none;" id="copySource" contenteditable="true">
     {html_table}
