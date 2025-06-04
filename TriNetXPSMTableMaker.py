@@ -17,11 +17,11 @@ df_raw = pd.read_csv(uploaded_file, skiprows=9)
 def extract_clean_table(df):
     start = None
     for i, row in df.iterrows():
-        if "Characteristic" in str(row[0]):
+        if "Characteristic ID" in str(row[0]):
             start = i
             break
     if start is None:
-        st.error("❌ Could not find a row containing 'Characteristic'. Please check your CSV file.")
+        st.error("❌ Could not find a row containing 'Characteristic ID'. Please check your CSV file.")
         st.stop()
     df_clean = df.iloc[start:].reset_index(drop=True)
     df_clean.columns = df_clean.iloc[0]
