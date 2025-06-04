@@ -136,49 +136,14 @@ if edit_toggle:
     )
     df_trimmed = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
 
-# Final preview
-
-def get_journal_css(journal_style, font_size, h_align, v_align):
-    return f"""
-    <style>
-    table {{
-        border-collapse: collapse;
-        width: 100%;
-        font-family: Arial, sans-serif;
-        font-size: {font_size}pt;
-    }}
-    th, td {{
-        border: 1px solid black;
-        padding: 6px;
-        text-align: {h_align};
-        vertical-align: {v_align};
-    }}
-    th {{
-        background-color: #f2f2f2;
-        font-weight: bold;
-    }}
-    .group-row td {{
-        background-color: #e6e6e6;
-        font-weight: bold;
-        text-align: left;
-    }}
-    </style>
-    """
-
-def generate_html_table(df, journal_style, font_size, h_align, v_align):
-    css = get_journal_css(journal_style, font_size, h_align, v_align)
-    html = css + "<table><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
-    for _, row in df.iterrows():
-        if row["Characteristic Name"] in preset_groups:
-            html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row['Characteristic Name']}</td></tr>"
-        else:
-            html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row]) + "</tr>"
-    html += "</table>"
-    return html
-
-html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
-st.markdown("### 🧾 Formatted Table Preview")
-st.markdown(html_table, unsafe_allow_html=True)
+    # Refresh table preview after edits
+    html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
+    st.markdown("### 🧾 Formatted Table Preview")
+    st.markdown(html_table, unsafe_allow_html=True)
+else:
+    html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
+    st.markdown("### 🧾 Formatted Table Preview")
+    st.markdown(html_table, unsafe_allow_html=True)
 
 copy_button_html = f"""
 <div id="copy-container">
