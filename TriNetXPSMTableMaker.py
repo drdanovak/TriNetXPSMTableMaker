@@ -1,6 +1,5 @@
 
 import streamlit as st
-import html  # For safe HTML escaping
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
@@ -172,7 +171,6 @@ def get_journal_css(journal_style, font_size, h_align, v_align):
     return f"""
     <style>
     table {{
-        background-color: white;
         border-collapse: collapse;
         width: 100%;
         font-family: Arial, sans-serif;
@@ -226,65 +224,10 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
                 html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row.get(col_key, '')}</td></tr>"
             else:
                 if isinstance(df.columns, pd.MultiIndex):
-                    
-# Define spacer logic based on column names
-def get_cell_style(col_name):
-    if isinstance(col_name, tuple):
-        col_name = col_name[1]
-    spacers = [
-        "Cohort 1 Before: SD", 
-        "Before: Standardized Mean Difference", 
-        "Cohort 2 Before: Patient Count", 
-        "Cohort 2 After: Patient Count"
-    ]
-    next_spacers = [
-        "Before: p-Value", 
-        "Cohort 1 After: Patient Count", 
-        "After: p-Value"
-    ]
-    if col_name in spacers:
-        return "border-right:12px solid white;"
-    elif col_name in next_spacers:
-        return "border-left:12px solid white;"
-    else:
-        return ""
-
-}</td>" 
-    for col in df.columns
-]
-
+                    cells = [f"<td>{row[col]}</td>" for col in df.columns]
                 else:
                     cells = [f"<td>{cell}</td>" for cell in row.values]
-                
-# Define spacer logic based on column names
-def get_cell_style(col_name):
-    if isinstance(col_name, tuple):
-        col_name = col_name[1]  # Only use actual column name
-    spacers = [
-        "Cohort 1 Before: SD",
-        "Before: Standardized Mean Difference",
-        "Cohort 2 Before: Patient Count",
-        "Cohort 2 After: Patient Count"
-    ]
-    next_spacers = [
-        "Before: p-Value",
-        "Cohort 1 After: Patient Count",
-        "After: p-Value"
-    ]
-    if col_name in spacers:
-        return "border-right:12px solid white;"
-    elif col_name in next_spacers:
-        return "border-left:12px solid white;"
-    else:
-        return ""
-
-cells = []
-for col in df.columns:
-    style = get_cell_style(col)
-    value = row[col]
-    cells.append(f"<td style='{style}'>{html.escape(str(value))}</td>")
-
-html += "<tr>" + "".join(cells) + "</tr>"
+                html += "<tr>" + "".join(cells) + "</tr>"
         html += "</table>"
         return html
     except Exception as e:
