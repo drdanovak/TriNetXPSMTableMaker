@@ -17,19 +17,19 @@ df_data = df_raw[1:].reset_index(drop=True)
 original_df = df_data.copy()
 
 # Sidebar Settings UI Changes
-with st.sidebar.expander("🛠️ Table Formatting Settings", expanded=False):
+with st.sidebar.markdown("### ✍️ Table Operations")
+edit_toggle = st.sidebar.checkbox("✏️ Edit Table (with drag-and-drop)")
+merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
+add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators (with headers)")
+reset_table = st.sidebar.button("🔄 Reset Table to Default")
+
+st.sidebar.expander("🛠️ Table Formatting Settings", expanded=False):
     st.markdown("### 🔧 Adjust Visual Presentation")
     font_size = st.slider("Font Size", 6, 18, 10)
     h_align = st.selectbox("Text Horizontal Alignment", ["left", "center", "right"])
     v_align = st.selectbox("Text Vertical Alignment", ["top", "middle", "bottom"])
     journal_style = st.selectbox("Journal Style", ["None", "NEJM", "AMA", "APA", "JAMA"])
     decimal_places = st.slider("Round numerical values to", 0, 5, 2)
-
-st.sidebar.markdown("### ✍️ Table Operations")
-edit_toggle = st.sidebar.checkbox("✏️ Edit Table (with drag-and-drop)")
-merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
-add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators (with headers)")
-reset_table = st.sidebar.button("🔄 Reset Table to Default")
 
 default_columns = [
     "Characteristic Name", "Characteristic ID", "Category",
