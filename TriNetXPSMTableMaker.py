@@ -271,6 +271,7 @@ if st.session_state.get("refresh_preview", True):
     html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
 st.markdown("### 🧾 Formatted Table Preview")
 st.markdown(html_table, unsafe_allow_html=True)
+st.markdown(copy_button_html, unsafe_allow_html=True)
 
 copy_button_html = f'''
 <div id="copy-container">
@@ -312,6 +313,4 @@ function copyToWord() {
 }
 </script>
 """
-st.markdown(copy_button_html, unsafe_allow_html=True)
-st.markdown(copy_script, unsafe_allow_html=True)
 st.markdown(copy_button_html, unsafe_allow_html=True)
