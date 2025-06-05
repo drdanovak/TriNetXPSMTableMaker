@@ -179,7 +179,24 @@ if edit_toggle:
     st.markdown("### 🔁 Refresh Formatted Preview")
     st.session_state["refresh_preview"] = st.button("🔄 Update Preview Table Now")
 
-    # Skip auto-refresh logic — handled manually by button
+    # Restore multi-index column structure if grouping was applied
+    if add_column_grouping:
+        try:
+            col_names = list(updated_df.columns)
+            before_cols = [col for col in col_names if 'Before' in col and 'After' not in col]
+            after_cols = [col for col in col_names if 'After' in col]
+            first_cols = [col for col in col_names if col not in before_cols + after_cols]
+
+            new_order = first_cols + before_cols + after_cols
+            updated_df = updated_df[new_order]
+
+            grouped_labels = ([''] * len(first_cols) +
+                              ['Before Propensity Score Matching'] * len(before_cols) +
+                              ['After Propensity Score Matching'] * len(after_cols))
+            updated_df.columns = pd.MultiIndex.from_tuples(zip(grouped_labels, updated_df.columns))
+        except Exception as e:
+            st.error(f"Error restoring column groups after edit: {e}")
+
     df_trimmed = updated_df
 
 
