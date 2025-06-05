@@ -40,7 +40,6 @@ default_columns = [
     "Cohort 1 After: Patient Count", "Cohort 1 After: % of Cohort", "Cohort 1 After: Mean", "Cohort 1 After: SD",
     "Cohort 2 After: Patient Count", "Cohort 2 After: % of Cohort", "Cohort 2 After: Mean", "Cohort 2 After: SD",
     "After: p-Value", "After: Standardized Mean Difference"
-]
 available_columns = list(df_data.columns)
 filtered_columns = [col for col in default_columns if col in available_columns]
 df_trimmed = df_data[filtered_columns].copy()
@@ -236,12 +235,10 @@ def get_cell_style(col_name):
         "Before: Standardized Mean Difference", 
         "Cohort 2 Before: Patient Count", 
         "Cohort 2 After: Patient Count"
-    ]
     next_spacers = [
         "Before: p-Value", 
         "Cohort 1 After: Patient Count", 
         "After: p-Value"
-    ]
     if col_name in spacers:
         return "border-right:12px solid white;"
     elif col_name in next_spacers:
@@ -263,12 +260,10 @@ def get_cell_style(col_name):
         "Before: Standardized Mean Difference",
         "Cohort 2 Before: Patient Count",
         "Cohort 2 After: Patient Count"
-    ]
     next_spacers = [
         "Before: p-Value",
         "Cohort 1 After: Patient Count",
         "After: p-Value"
-    ]
     if col_name in spacers:
         return "border-right:12px solid white;"
     elif col_name in next_spacers:
