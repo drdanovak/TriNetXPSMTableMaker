@@ -17,11 +17,11 @@ df_data = df_raw[1:].reset_index(drop=True)
 original_df = df_data.copy()
 
 # Sidebar Settings UI Changes
-with st.sidebar.markdown("### ✍️ Table Operations")
-edit_toggle = st.sidebar.checkbox("✏️ Edit Table (with drag-and-drop)")
-merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
-add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators (with headers)")
-reset_table = st.sidebar.button("🔄 Reset Table to Default")
+with st.sidebar.expander("### ✍️ Table Operations", expanded=False)
+    edit_toggle = st.sidebar.checkbox("✏️ Edit Table (with drag-and-drop)")
+    merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
+    add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators (with headers)")
+    reset_table = st.sidebar.button("🔄 Reset Table to Default")
 
 st.sidebar.expander("🛠️ Table Formatting Settings", expanded=False):
     st.markdown("### 🔧 Adjust Visual Presentation")
