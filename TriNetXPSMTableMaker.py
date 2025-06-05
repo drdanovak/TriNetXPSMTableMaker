@@ -216,7 +216,20 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     css = get_journal_css(journal_style, font_size, h_align, v_align)
     html = css + "<table>"
     if add_column_grouping and isinstance(df.columns, pd.MultiIndex):
-        group_row = "<tr>" + "".join([f"<th colspan='1'>{grp}</th>" for grp in df.columns.get_level_values(0)]) + "</tr>"
+        group_levels = df.columns.get_level_values(0)
+        col_spans = []
+        last = None
+        span = 0
+        for grp in group_levels:
+            if grp == last:
+                span += 1
+            else:
+                if last is not None:
+                    col_spans.append((last, span))
+                last = grp
+                span = 1
+        col_spans.append((last, span))
+        group_row = "<tr>" + "".join([f"<th colspan='{span}'>{grp}</th>" for grp, span in col_spans]) + "</tr>"
         subheader_row = "<tr>" + "".join([f"<th>{sub}</th>" for sub in df.columns.get_level_values(1)]) + "</tr>"
         html += group_row + subheader_row
     else:
