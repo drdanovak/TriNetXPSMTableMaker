@@ -51,7 +51,7 @@ df_trimmed = df_data[selected_columns].copy()
 df_trimmed.rename(columns=rename_dict, inplace=True)
 df_trimmed.fillna("", inplace=True)
 
-# Rounding and formatting
+# Rounding
 for col in df_trimmed.columns:
     try:
         df_trimmed[col] = df_trimmed[col].astype(float).round(decimal_places)
@@ -126,16 +126,23 @@ if add_column_grouping:
 if reset_table:
     df_trimmed = original_df[filtered_columns].copy()
 
-# Editable mode
+# Row order persistence
+if "row_order" not in st.session_state:
+    st.session_state["row_order"] = list(df_trimmed["Characteristic Name"])
+
 if edit_toggle:
     st.subheader("📋 Editable Table")
     aggrid_df = df_trimmed.copy()
+
     if isinstance(aggrid_df.columns, pd.MultiIndex):
         aggrid_df.columns = [' '.join(col).strip() for col in aggrid_df.columns]
+
     aggrid_df.insert(0, "Drag", "⇅")
     gb = GridOptionsBuilder.from_dataframe(aggrid_df)
     gb.configure_default_column(editable=True, resizable=True)
-    gb.configure_column("Drag", header_name="⇅ Drag to Reorder (Click Lock to Confirm)", rowDrag=True, pinned="left", editable=False, width=250)
+    gb.configure_column("Drag", header_name="⇅ Drag to Reorder", rowDrag=True, pinned="left", editable=False, width=250)
+    gb.configure_grid_options(rowDragManaged=True)
+
     group_row_style = JsCode("""
     function(params) {
         if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'] && params.data['Characteristic Name'].toString().trim())) {
@@ -148,7 +155,9 @@ if edit_toggle:
     }
     """)
     gb.configure_grid_options(getRowStyle=group_row_style)
+
     gridOptions = gb.build()
+
     grid_response = AgGrid(
         aggrid_df,
         gridOptions=gridOptions,
@@ -156,11 +165,23 @@ if edit_toggle:
         fit_columns_on_grid_load=True,
         allow_unsafe_jscode=True,
         height=500,
-        reload_data=True
+        reload_data=False
     )
+
     updated_df = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
+
+    if "Characteristic Name" in updated_df.columns:
+        st.session_state["row_order"] = list(updated_df["Characteristic Name"])
+
+    # Apply row order
+    name_col = "Characteristic Name"
+    df_trimmed.set_index(name_col, inplace=True, drop=False)
+    df_trimmed = df_trimmed.reindex(st.session_state["row_order"]).reset_index(drop=True)
+
     st.markdown("### 🔁 Refresh Formatted Preview")
     st.session_state["refresh_preview"] = st.button("🔄 Update Preview Table Now")
+
+    # Reapply column grouping if needed
     if add_column_grouping:
         try:
             col_names = list(updated_df.columns)
@@ -247,4 +268,3 @@ if st.session_state.get("refresh_preview", True):
 
 st.markdown("### 🧾 Formatted Table Preview")
 st.markdown(html_table, unsafe_allow_html=True)
-
