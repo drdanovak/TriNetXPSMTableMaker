@@ -267,8 +267,7 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     return html
 
 html_table = ""
-if st.session_state.get("refresh_preview", True):
-    html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
+html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
 
     
 
@@ -315,5 +314,5 @@ function copyToWord() {
 </script>
 """
 
-full_html = f"{html_table}{copy_button_html}{copy_script}"
+full_html = html_table + copy_button_html + copy_script
 st.markdown(full_html, unsafe_allow_html=True)
