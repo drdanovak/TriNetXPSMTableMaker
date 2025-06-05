@@ -2,7 +2,6 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide")
 st.title("📊 Novak's TriNetX Journal-Style Table Generator")
@@ -32,7 +31,6 @@ merge_duplicates = st.sidebar.checkbox("🔁 Merge duplicate row titles")
 add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators (with headers)")
 reset_table = st.sidebar.button("🔄 Reset Table to Default")
 
-# Column filtering and renaming
 default_columns = [
     "Characteristic Name", "Characteristic ID", "Category",
     "Cohort 1 Before: Patient Count", "Cohort 1 Before: % of Cohort", "Cohort 1 Before: Mean", "Cohort 1 Before: SD",
@@ -49,12 +47,10 @@ df_trimmed = df_data[filtered_columns].copy()
 with st.sidebar.expander("📋 Column Selection and Renaming", expanded=False):
     selected_columns = st.multiselect("Select columns to include", available_columns, default=filtered_columns)
     rename_dict = {col: st.text_input(f"Rename '{col}'", col, key=f"rename_{col}") for col in selected_columns}
-
 df_trimmed = df_data[selected_columns].copy()
 df_trimmed.rename(columns=rename_dict, inplace=True)
 df_trimmed.fillna("", inplace=True)
 
-# Preset group rows
 with st.sidebar.expander("🧩 Group Rows Settings", expanded=False):
     preset_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
     custom_group_input = st.text_input("Add Custom Group Name")
@@ -63,7 +59,6 @@ with st.sidebar.expander("🧩 Group Rows Settings", expanded=False):
         preset_groups = list(dict.fromkeys(preset_groups))
     selected_groups = [label for label in preset_groups if st.checkbox(label, key=f"group_checkbox_{label}")]
 
-# Apply rounding
 for col in df_trimmed.columns:
     try:
         df_trimmed[col] = df_trimmed[col].astype(float).round(decimal_places)
@@ -74,7 +69,6 @@ for col in df_trimmed.columns:
     if "p-Value" in col:
         df_trimmed[col] = df_trimmed[col].apply(lambda x: "p<.001" if str(x).strip() == "0" else x)
 
-# Insert group rows
 if selected_groups:
     current_rows = df_trimmed.to_dict("records")
     rebuilt_rows = []
@@ -93,7 +87,6 @@ if selected_groups:
             rebuilt_rows.insert(0, group_row)
     df_trimmed = pd.DataFrame(rebuilt_rows)
 
-# Merge duplicates
 if merge_duplicates:
     for merge_col in [col for col in df_trimmed.columns if col.strip() in ["Characteristic ID", "Characteristic Name"]]:
         prev = None
@@ -106,7 +99,6 @@ if merge_duplicates:
                 prev = val
         df_trimmed[merge_col] = new_col
 
-# Apply column grouping (MultiIndex)
 if add_column_grouping:
     try:
         col_names = list(df_trimmed.columns)
@@ -114,32 +106,30 @@ if add_column_grouping:
         after_cols = [col for col in col_names if 'After' in col]
         first_cols = [col for col in col_names if col not in before_cols + after_cols]
         new_order = first_cols + before_cols + after_cols
-        df_trimmed = df_trimmed[new_order]
         grouped_labels = ([''] * len(first_cols) +
                           ['Before Propensity Score Matching'] * len(before_cols) +
                           ['After Propensity Score Matching'] * len(after_cols))
-        df_trimmed.columns = pd.MultiIndex.from_tuples(zip(grouped_labels, df_trimmed.columns))
+        multi_index = pd.MultiIndex.from_arrays([grouped_labels, new_order])
+        df_trimmed = df_trimmed[new_order]
+        df_trimmed.columns = multi_index
     except Exception as e:
         st.error(f"Error applying column grouping headers: {e}")
 
-# Identify proper name column
 name_col = ('', 'Characteristic Name') if isinstance(df_trimmed.columns, pd.MultiIndex) else 'Characteristic Name'
 if "row_order" not in st.session_state:
     st.session_state["row_order"] = list(df_trimmed[name_col])
 
-# Drag-and-drop reorder
 if edit_toggle:
     st.markdown("🔓 **Drag-and-Drop Enabled:** Click and drag the '⇅ Drag to Reorder' column in the table below to rearrange rows. You can disable editing in the sidebar to lock the table.")
     st.subheader("📋 Editable Table")
     aggrid_df = df_trimmed.copy()
     if isinstance(aggrid_df.columns, pd.MultiIndex):
-        aggrid_df.columns = [' '.join(col).strip() for col in aggrid_df.columns]
+        aggrid_df.columns = [col[1] for col in aggrid_df.columns]
     aggrid_df.insert(0, "Drag", "⇅")
     gb = GridOptionsBuilder.from_dataframe(aggrid_df)
     gb.configure_default_column(editable=True, resizable=True)
     gb.configure_column("Drag", header_name="⇅ Drag to Reorder", rowDrag=True, pinned="left", editable=False, width=250)
     gb.configure_grid_options(rowDragManaged=True)
-
     group_row_style = JsCode("""
     function(params) {
         if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'] && params.data['Characteristic Name'].toString().trim())) {
@@ -152,16 +142,7 @@ if edit_toggle:
     }
     """)
     gb.configure_grid_options(getRowStyle=group_row_style)
-
-    grid_response = AgGrid(
-        aggrid_df,
-        gridOptions=gb.build(),
-        update_mode=GridUpdateMode.MODEL_CHANGED,
-        fit_columns_on_grid_load=True,
-        allow_unsafe_jscode=True,
-        height=500,
-        reload_data=False
-    )
+    grid_response = AgGrid(aggrid_df, gridOptions=gb.build(), update_mode=GridUpdateMode.MODEL_CHANGED, fit_columns_on_grid_load=True, allow_unsafe_jscode=True, height=500, reload_data=False)
     updated_df = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
     if "Characteristic Name" in updated_df.columns:
         st.session_state["row_order"] = list(updated_df["Characteristic Name"])
@@ -177,11 +158,11 @@ if edit_toggle:
             after_cols = [col for col in col_names if 'After' in col]
             first_cols = [col for col in col_names if col not in before_cols + after_cols]
             new_order = first_cols + before_cols + after_cols
-            updated_df = updated_df[new_order]
             grouped_labels = ([''] * len(first_cols) +
                               ['Before Propensity Score Matching'] * len(before_cols) +
                               ['After Propensity Score Matching'] * len(after_cols))
-            updated_df.columns = pd.MultiIndex.from_tuples(zip(grouped_labels, updated_df.columns))
+            updated_df = updated_df[new_order]
+            updated_df.columns = pd.MultiIndex.from_arrays([grouped_labels, new_order])
         except Exception as e:
             st.error(f"Error restoring column groups after edit: {e}")
     df_trimmed = updated_df
@@ -242,7 +223,11 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
             if char_name in [label.strip().lower() for label in selected_groups]:
                 html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row.get(col_key, '')}</td></tr>"
             else:
-                html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row.values]) + "</tr>"
+                if isinstance(df.columns, pd.MultiIndex):
+                    cells = [f"<td>{row[col]}</td>" for col in df.columns]
+                else:
+                    cells = [f"<td>{cell}</td>" for cell in row.values]
+                html += "<tr>" + "".join(cells) + "</tr>"
         html += "</table>"
         return html
     except Exception as e:
