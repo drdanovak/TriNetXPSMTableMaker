@@ -132,9 +132,9 @@ if edit_toggle:
     gb.configure_column("Drag", header_name="⇅ Drag to Reorder", rowDrag=True, pinned="left", editable=False, width=250)
     gb.configure_grid_options(rowDragManaged=True)
     group_row_style = JsCode("""
-    function(params) {
+    function(params) {{
         if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'] && params.data['Characteristic Name'].toString().trim())) {
-            return {
+            return {{
                 'fontWeight': 'bold',
                 'backgroundColor': '#e6e6e6',
                 'textAlign': 'left'
@@ -249,7 +249,6 @@ def get_cell_style(col_name):
     else:
         return ""
 
-}</td>" 
     for col in df.columns
 ]
 
