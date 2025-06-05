@@ -23,7 +23,7 @@ with st.sidebar.expander("### ✍️ Table Operations", expanded=False):
     add_column_grouping = st.sidebar.checkbox("📌 Add Before/After PSM Column Separators (with headers)")
     reset_table = st.sidebar.button("🔄 Reset Table to Default")
 
-st.sidebar.expander("🛠️ Table Formatting Settings", expanded=False):
+with st.sidebar.expander("🛠️ Table Formatting Settings", expanded=False):
     st.markdown("### 🔧 Adjust Visual Presentation")
     font_size = st.slider("Font Size", 6, 18, 10)
     h_align = st.selectbox("Text Horizontal Alignment", ["left", "center", "right"])
