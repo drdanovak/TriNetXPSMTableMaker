@@ -254,9 +254,9 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     for _, row in df.iterrows():
         char_name = str(row.get("Characteristic Name", "")).strip().lower()
         if char_name in [label.strip().lower() for label in selected_groups]:
-            html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row['Characteristic Name']}</td></tr>"
+            html += "<tr class='group-row'>" + "".join([f"<td colspan='{len(df.columns)}'>{row.get('Characteristic Name', '')}</td>"]) + "</tr>"
         else:
-            html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row]) + "</tr>"
+            html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row.values]) + "</tr>"
     html += "</table>"
     return html
 
