@@ -311,14 +311,5 @@ function copyToWord() {
 </script>
 """
 st.markdown("### 🧾 Formatted Table Preview")
-st.markdown(html_table, unsafe_allow_html=True)
-
-st.markdown(copy_script, unsafe_allow_html=True)
-
-
-
-
-
-
-
-st.markdown(copy_button_html, unsafe_allow_html=True)
+full_html = f"{html_table}{copy_button_html}{copy_script}"
+st.markdown(full_html, unsafe_allow_html=True)
