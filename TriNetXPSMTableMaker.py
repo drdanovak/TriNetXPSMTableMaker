@@ -1,5 +1,6 @@
 
 import streamlit as st
+import html  # For safe HTML escaping
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
@@ -281,7 +282,7 @@ cells = []
 for col in df.columns:
     style = get_cell_style(col)
     value = row[col]
-    cells.append(f"<td style='{style}'>{value}</td>")
+    cells.append(f"<td style='{style}'>{html.escape(str(value))}</td>")
 
 html += "<tr>" + "".join(cells) + "</tr>"
         html += "</table>"
