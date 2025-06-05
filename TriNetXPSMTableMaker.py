@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
-import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide")
 st.title("📊 TriNetX Journal-Style Table Formatter")
@@ -119,14 +118,14 @@ if add_column_grouping:
     except Exception as e:
         st.error(f"Error applying column grouping headers: {e}")
 
-# Detect correct key for Characteristic Name
+# Identify proper name column
 name_col = ('', 'Characteristic Name') if isinstance(df_trimmed.columns, pd.MultiIndex) else 'Characteristic Name'
 
-# Initialize row order session state
+# Initialize saved row order
 if "row_order" not in st.session_state:
     st.session_state["row_order"] = list(df_trimmed[name_col])
 
-# Editable mode
+# Editable table with drag and drop
 if edit_toggle:
     st.subheader("📋 Editable Table")
     aggrid_df = df_trimmed.copy()
@@ -169,9 +168,13 @@ if edit_toggle:
     if "Characteristic Name" in updated_df.columns:
         st.session_state["row_order"] = list(updated_df["Characteristic Name"])
 
-    # Reapply ordering to df_trimmed
-    df_trimmed.set_index(name_col, inplace=True, drop=False)
-    df_trimmed = df_trimmed.reindex(st.session_state["row_order"]).reset_index(drop=True)
+    # Reorder df_trimmed using helper column to avoid duplicate index error
+    df_trimmed["_row_order"] = df_trimmed[name_col].apply(
+        lambda x: st.session_state["row_order"].index(x) if x in st.session_state["row_order"] else float("inf")
+    )
+    df_trimmed.sort_values("_row_order", inplace=True)
+    df_trimmed.drop(columns=["_row_order"], inplace=True)
+    df_trimmed.reset_index(drop=True, inplace=True)
 
     st.session_state["refresh_preview"] = st.button("🔄 Update Preview Table Now")
 
