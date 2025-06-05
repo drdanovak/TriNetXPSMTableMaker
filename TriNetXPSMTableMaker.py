@@ -51,7 +51,7 @@ df_trimmed = df_data[selected_columns].copy()
 df_trimmed.rename(columns=rename_dict, inplace=True)
 df_trimmed.fillna("", inplace=True)
 
-# Rounding
+# Rounding and formatting
 for col in df_trimmed.columns:
     try:
         df_trimmed[col] = df_trimmed[col].astype(float).round(decimal_places)
@@ -75,20 +75,16 @@ selected_groups = [label for label in preset_groups if st.sidebar.checkbox(label
 if selected_groups:
     current_rows = df_trimmed.to_dict("records")
     rebuilt_rows = []
-    i = 0
-    while i < len(current_rows):
-        row = current_rows[i]
-        name = str(row["Characteristic Name"]).strip()
+    for row in current_rows:
+        name = str(row.get("Characteristic Name", "")).strip()
         if name in selected_groups:
             rebuilt_rows.append(row)
-            i += 1
         elif name in preset_groups:
-            i += 1
+            continue
         else:
             rebuilt_rows.append(row)
-            i += 1
     for group in selected_groups:
-        if not any(str(row["Characteristic Name"]).strip() == group for row in rebuilt_rows):
+        if not any(str(row.get("Characteristic Name", "")).strip() == group for row in rebuilt_rows):
             group_row = {col: "" for col in df_trimmed.columns}
             group_row["Characteristic Name"] = group
             rebuilt_rows.insert(0, group_row)
@@ -107,7 +103,7 @@ if merge_duplicates:
                 prev = val
         df_trimmed[merge_col] = new_col
 
-# Column grouping
+# Apply column grouping (MultiIndex)
 if add_column_grouping:
     try:
         col_names = list(df_trimmed.columns)
@@ -123,13 +119,14 @@ if add_column_grouping:
     except Exception as e:
         st.error(f"Error applying column grouping headers: {e}")
 
-if reset_table:
-    df_trimmed = original_df[filtered_columns].copy()
+# Detect correct key for Characteristic Name
+name_col = ('', 'Characteristic Name') if isinstance(df_trimmed.columns, pd.MultiIndex) else 'Characteristic Name'
 
-# Row order persistence
+# Initialize row order session state
 if "row_order" not in st.session_state:
-    st.session_state["row_order"] = list(df_trimmed["Characteristic Name"])
+    st.session_state["row_order"] = list(df_trimmed[name_col])
 
+# Editable mode
 if edit_toggle:
     st.subheader("📋 Editable Table")
     aggrid_df = df_trimmed.copy()
@@ -156,11 +153,9 @@ if edit_toggle:
     """)
     gb.configure_grid_options(getRowStyle=group_row_style)
 
-    gridOptions = gb.build()
-
     grid_response = AgGrid(
         aggrid_df,
-        gridOptions=gridOptions,
+        gridOptions=gb.build(),
         update_mode=GridUpdateMode.MODEL_CHANGED,
         fit_columns_on_grid_load=True,
         allow_unsafe_jscode=True,
@@ -170,18 +165,17 @@ if edit_toggle:
 
     updated_df = pd.DataFrame(grid_response["data"]).drop(columns=["Drag"], errors="ignore")
 
+    # Update saved row order
     if "Characteristic Name" in updated_df.columns:
         st.session_state["row_order"] = list(updated_df["Characteristic Name"])
 
-    # Apply row order
-    name_col = "Characteristic Name"
+    # Reapply ordering to df_trimmed
     df_trimmed.set_index(name_col, inplace=True, drop=False)
     df_trimmed = df_trimmed.reindex(st.session_state["row_order"]).reset_index(drop=True)
 
-    st.markdown("### 🔁 Refresh Formatted Preview")
     st.session_state["refresh_preview"] = st.button("🔄 Update Preview Table Now")
 
-    # Reapply column grouping if needed
+    # Reapply MultiIndex
     if add_column_grouping:
         try:
             col_names = list(updated_df.columns)
