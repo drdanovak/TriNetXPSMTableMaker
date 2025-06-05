@@ -269,10 +269,6 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
 html_table = ""
 if st.session_state.get("refresh_preview", True):
     html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
-st.markdown("### 🧾 Formatted Table Preview")
-st.markdown(html_table, unsafe_allow_html=True)
-st.markdown(copy_button_html, unsafe_allow_html=True)
-st.markdown(copy_script, unsafe_allow_html=True)
 
 copy_button_html = f'''
 <div id="copy-container">
@@ -300,7 +296,7 @@ function copyTableToClipboard() {
 
 function copyToWord() {
   const tableHTML = document.getElementById("copySource").innerHTML;
-  const blob = new Blob(['<html><head><meta charset="utf-8"></head><body>' + tableHTML + '</body></html>'], {
+  const blob = new Blob(['<html><head><meta charset=\"utf-8\"></head><body>' + tableHTML + '</body></html>'], {
     type: 'application/msword'
   });
   const url = URL.createObjectURL(blob);
@@ -314,4 +310,13 @@ function copyToWord() {
 }
 </script>
 """
+st.markdown("### 🧾 Formatted Table Preview")
+st.markdown(html_table, unsafe_allow_html=True)
+st.markdown(copy_button_html, unsafe_allow_html=True)
+st.markdown(copy_script, unsafe_allow_html=True)
+
+
+
+
+
 st.markdown(copy_button_html, unsafe_allow_html=True)
