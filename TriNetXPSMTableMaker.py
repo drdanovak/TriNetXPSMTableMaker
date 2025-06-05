@@ -251,7 +251,6 @@ def get_cell_style(col_name):
 
     for col in df.columns
     
-
                 else:
                     cells = [f"<td>{cell}</td>" for cell in row.values]
                 
