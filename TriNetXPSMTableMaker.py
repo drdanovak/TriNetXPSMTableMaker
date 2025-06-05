@@ -273,24 +273,40 @@ st.markdown("### 🧾 Formatted Table Preview")
 st.markdown(html_table, unsafe_allow_html=True)
 
 copy_button_html = f"""
-<div id="copy-container">
-  <div id="copySource" contenteditable="true" style="position: absolute; left: -9999px;">
+<div id=\"copy-container\">
+  <div id=\"copySource\" contenteditable=\"true\" style=\"position: absolute; left: -9999px;\">
     {html_table}
   </div>
-  <button onclick="copyTableToClipboard()" style="padding:6px 12px; font-size:14px;">📋 Copy Table to Clipboard</button>
+  <button onclick=\"copyTableToClipboard()\" style=\"padding:6px 12px; font-size:14px;\">📋 Copy Table to Clipboard</button>
+  <button onclick=\"copyToWord()\" style=\"padding:6px 12px; font-size:14px; margin-left: 10px;\">📄 Copy Table for Word</button>
 </div>
 <script>
-function copyTableToClipboard() {{
+function copyTableToClipboard() {
   const range = document.createRange();
-  const copySource = document.getElementById("copySource");
+  const copySource = document.getElementById(\"copySource\");
   range.selectNodeContents(copySource);
   const sel = window.getSelection();
   sel.removeAllRanges();
   sel.addRange(range);
-  document.execCommand("copy");
+  document.execCommand(\"copy\");
   sel.removeAllRanges();
-  alert("✅ Table copied to clipboard!");
-}}
+  alert(\"✅ Table copied to clipboard!\");
+}
+
+function copyToWord() {
+  const tableHTML = document.getElementById(\"copySource\").innerHTML;
+  const blob = new Blob(['<html><head><meta charset="utf-8"></head><body>' + tableHTML + '</body></html>'], {
+    type: 'application/msword'
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'TriNetX_Table.doc';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  alert(\"✅ Word-compatible file generated and downloaded.\");
+}
 </script>
 """
 st.markdown(copy_button_html, unsafe_allow_html=True)
