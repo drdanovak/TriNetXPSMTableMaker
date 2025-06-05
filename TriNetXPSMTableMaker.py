@@ -225,7 +225,6 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
             if char_name in [label.strip().lower() for label in selected_groups]:
                 html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row.get(col_key, '')}</td></tr>"
             else:
-                if isinstance(df.columns, pd.MultiIndex):
     if isinstance(df.columns, pd.MultiIndex):
         pass
 # Define spacer logic based on column names
