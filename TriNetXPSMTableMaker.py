@@ -252,9 +252,16 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     else:
         html += "<tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
     for _, row in df.iterrows():
-        char_name = str(row.get("Characteristic Name", "")).strip().lower()
-        if char_name in [label.strip().lower() for label in selected_groups]:
-            html += "<tr class='group-row'>" + "".join([f"<td colspan='{len(df.columns)}'>{row.get('Characteristic Name', '')}</td>"]) + "</tr>"
+        if isinstance(df.columns, pd.MultiIndex):
+        col_key = ('', 'Characteristic Name')
+    else:
+        col_key = 'Characteristic Name'
+
+    char_name = str(row.get(col_key, '')).strip().lower()
+    if char_name in [label.strip().lower() for label in selected_groups]:
+        html += f"<tr class='group-row'><td colspan='{len(df.columns)}'>{row.get(col_key, '')}</td></tr>"
+    else:
+        html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row.values]) + "</tr>""
         else:
             html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row.values]) + "</tr>"
     html += "</table>"
