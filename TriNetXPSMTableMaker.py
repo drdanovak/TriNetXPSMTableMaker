@@ -270,47 +270,10 @@ html_table = ""
 if st.session_state.get("refresh_preview", True):
     html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
 
-    copy_button_html = f'''
-    <div id="copy-container">
-      <div id="copySource" contenteditable="true" style="position: absolute; left: -9999px;">
-        {html_table}
-      </div>
-      <button onclick="copyTableToClipboard()" style="padding:6px 12px; font-size:14px;">📋 Copy Table to Clipboard</button>
-      <button onclick="copyToWord()" style="padding:6px 12px; font-size:14px; margin-left: 10px;">📄 Copy Table for Word</button>
-    </div>
-    '''
+    
 
-    copy_script = """
-    <script>
-    function copyTableToClipboard() {
-      const range = document.createRange();
-      const copySource = document.getElementById(\"copySource\");
-      range.selectNodeContents(copySource);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      document.execCommand(\"copy\");
-      sel.removeAllRanges();
-      alert(\"✅ Table copied to clipboard!\");
-    }
 
-    function copyToWord() {
-      const tableHTML = document.getElementById(\"copySource\").innerHTML;
-      const blob = new Blob(['<html><head><meta charset=\\"utf-8\\"></head><body>' + tableHTML + '</body></html>'], {
-        type: 'application/msword'
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'TriNetX_Table.doc';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      alert(\"✅ Word-compatible file generated and downloaded.\");
-    }
-    </script>
-    """
-
+st.markdown("### 🧾 Formatted Table Preview")
 copy_button_html = f'''
 <div id="copy-container">
   <div id="copySource" contenteditable="true" style="position: absolute; left: -9999px;">
@@ -351,6 +314,6 @@ function copyToWord() {
 }
 </script>
 """
-st.markdown("### 🧾 Formatted Table Preview")
+
 full_html = f"{html_table}{copy_button_html}{copy_script}"
 st.markdown(full_html, unsafe_allow_html=True)
