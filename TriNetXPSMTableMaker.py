@@ -269,21 +269,14 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
 html_table = ""
 html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
 
+# Render the formatted table preview
+st.markdown("### 🧾 Formatted Table Preview")
+st.markdown(html_table, unsafe_allow_html=True)
+
     
 
 
-st.markdown("### 🧾 Formatted Table Preview")
-copy_button_html = f'''
-<div id="copy-container">
-  <div id="copySource" contenteditable="true" style="position: absolute; left: -9999px;">
-    {html_table}
-  </div>
-  <button onclick="copyTableToClipboard()" style="padding:6px 12px; font-size:14px;">📋 Copy Table to Clipboard</button>
-  <button onclick="copyToWord()" style="padding:6px 12px; font-size:14px; margin-left: 10px;">📄 Copy Table for Word</button>
-</div>
-'''
 
-copy_script = """
 <script>
 function copyTableToClipboard() {
   const range = document.createRange();
