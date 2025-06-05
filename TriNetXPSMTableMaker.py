@@ -235,7 +235,7 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
                 html += "<tr>" + "".join([f"<td>{cell}</td>" for cell in row.values]) + "</tr>"
         html += "</table>"
         return html
-    except Exception as e:
+    except Exception as e:fk
         st.error(f"Error generating HTML table: {e}")
         return ""
 
