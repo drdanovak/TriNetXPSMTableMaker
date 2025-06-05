@@ -1,7 +1,4 @@
-from textwrap import dedent
 
-# Full regenerated script with all improvements
-full_script = dedent("""
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
@@ -143,7 +140,7 @@ if edit_toggle:
     gb.configure_column("Drag", header_name="⇅ Drag to Reorder", rowDrag=True, pinned="left", editable=False, width=250)
     gb.configure_grid_options(rowDragManaged=True)
 
-    group_row_style = JsCode(\"""
+    group_row_style = JsCode("""
     function(params) {
         if (params.data && ['Demographics', 'Conditions', 'Lab Values', 'Medications'].includes(params.data['Characteristic Name'] && params.data['Characteristic Name'].toString().trim())) {
             return {
@@ -153,7 +150,7 @@ if edit_toggle:
             }
         }
     }
-    \""")
+    """)
     gb.configure_grid_options(getRowStyle=group_row_style)
 
     grid_response = AgGrid(
@@ -190,7 +187,7 @@ if edit_toggle:
     df_trimmed = updated_df
 
 def get_journal_css(journal_style, font_size, h_align, v_align):
-    return f\"\"\"
+    return f"""
     <style>
     table {{
         border-collapse: collapse;
@@ -214,7 +211,7 @@ def get_journal_css(journal_style, font_size, h_align, v_align):
         text-align: left;
     }}
     </style>
-    \"\"\"
+    """
 
 def generate_html_table(df, journal_style, font_size, h_align, v_align):
     try:
@@ -258,11 +255,3 @@ if st.session_state.get("refresh_preview", True):
 
 st.markdown("### 🧾 Formatted Table Preview")
 st.markdown(html_table, unsafe_allow_html=True)
-""")
-
-# Save this to file so user can paste easily
-path = "/mnt/data/TriNetX_UI_Enhanced.py"
-with open(path, "w") as f:
-    f.write(full_script)
-
-path
