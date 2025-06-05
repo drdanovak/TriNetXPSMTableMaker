@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
@@ -247,13 +248,69 @@ def get_cell_style(col_name):
     else:
         return ""
 
-cells = [
+
+# Define spacer logic based on column names
+def get_cell_style(col_name):
+    if isinstance(col_name, tuple):
+        col_name = col_name[1]  # Only use actual column name
+    spacers = [
+        "Cohort 1 Before: SD",
+        "Before: Standardized Mean Difference",
+        "Cohort 2 Before: Patient Count",
+        "Cohort 2 After: Patient Count"
+    ]
+    next_spacers = [
+        "Before: p-Value",
+        "Cohort 1 After: Patient Count",
+        "After: p-Value"
+    ]
+    if col_name in spacers:
+        return "border-right:12px solid white;"
+    elif col_name in next_spacers:
+        return "border-left:12px solid white;"
+    else:
+        return ""
+
+cells = []
+for col in df.columns:
+    style = get_cell_style(col)
+    value = row[col]
+    cells.append(f"<td style='{style}'>{value}</td>")
+
     f"<td style='{get_cell_style(col)}'>{row[col]}</td>" 
     for col in df.columns
 ]
 
                 else:
-                    cells = [f"<td>{cell}</td>" for cell in row.values]
+                    
+# Define spacer logic based on column names
+def get_cell_style(col_name):
+    if isinstance(col_name, tuple):
+        col_name = col_name[1]  # Only use actual column name
+    spacers = [
+        "Cohort 1 Before: SD",
+        "Before: Standardized Mean Difference",
+        "Cohort 2 Before: Patient Count",
+        "Cohort 2 After: Patient Count"
+    ]
+    next_spacers = [
+        "Before: p-Value",
+        "Cohort 1 After: Patient Count",
+        "After: p-Value"
+    ]
+    if col_name in spacers:
+        return "border-right:12px solid white;"
+    elif col_name in next_spacers:
+        return "border-left:12px solid white;"
+    else:
+        return ""
+
+cells = []
+for col in df.columns:
+    style = get_cell_style(col)
+    value = row[col]
+    cells.append(f"<td style='{style}'>{value}</td>")
+f"<td>{cell}</td>" for cell in row.values]
                 html += "<tr>" + "".join(cells) + "</tr>"
         html += "</table>"
         return html
