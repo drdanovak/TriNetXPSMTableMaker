@@ -1,5 +1,34 @@
 import streamlit as st
 import pandas as pd
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
+
+st.set_page_config(layout="wide")
+st.title("\ud83d\udcca Novak's TriNetX Journal-Style Table Generator")
+
+uploaded_file = st.file_uploader("\ud83d\udcc2 Upload your TriNetX CSV file and turn it into a journal-ready table that you can copy and paste into a Word doc or poster. Made by Dr. Daniel Novak at UC Riverside School of Medicine, 2025.", type="csv")
+if not uploaded_file:
+    st.stop()
+
+# Load and clean CSV
+df_raw = pd.read_csv(uploaded_file, header=None, skiprows=9)
+df_raw.columns = df_raw.iloc[0]
+df_data = df_raw[1:].reset_index(drop=True)
+df_trimmed = df_data.copy()
+
+# UI Controls
+with st.sidebar.expander("\ud83d\udee0\ufe0f Table Formatting Settings"):
+    font_size = st.slider("Font Size", 6, 36, 12)
+    h_align = st.selectbox("Text Horizontal Alignment", ["left", "center", "right"])
+    v_align = st.selectbox("Text Vertical Alignment", ["top", "middle", "bottom"])
+    journal_style = st.selectbox("Journal Style", ["None", "NEJM", "AMA", "APA", "JAMA"])
+    decimal_places = st.slider("Round numerical values to", 0, 5, 2)
+
+add_column_grouping = st.sidebar.checkbox("\ud83d\udccc Add Before/After PSM Column Separators (with headers)")
+st.session_state["add_column_grouping"] = add_column_grouping
+
+# Example selected groups for rendering group rows in the table
+selected_groups = ["Demographics", "Conditions", "Lab Values", "Medications"]
+st.session_state["selected_groups"] = selected_groups
 
 def get_journal_css(journal_style, font_size, h_align, v_align):
     return f"""
@@ -97,3 +126,7 @@ def generate_html_table(df, journal_style, font_size, h_align, v_align):
     except Exception as e:
         st.error(f"Error generating HTML table: {e}")
         return ""
+
+html_table = generate_html_table(df_trimmed, journal_style, font_size, h_align, v_align)
+st.markdown("### \ud83d\udcbe Formatted Table Preview")
+st.markdown(html_table, unsafe_allow_html=True)
