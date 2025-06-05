@@ -55,7 +55,9 @@ df_trimmed.fillna("", inplace=True)
 
 for col in df_trimmed.columns:
     try:
-        df_trimmed[col] = df_trimmed[col].astype(float).round(decimal_places)
+        df_trimmed[col] = pd.to_numeric(df_trimmed[col], errors='coerce').round(decimal_places)
+    except Exception as e:
+        st.warning(f"Could not convert column {col} to numeric: {e}")
     except:
         pass
 
@@ -312,6 +314,8 @@ function copyToWord() {
 """
 st.markdown("### 🧾 Formatted Table Preview")
 st.markdown(html_table, unsafe_allow_html=True)
+
+
 
 st.markdown(copy_script, unsafe_allow_html=True)
 
